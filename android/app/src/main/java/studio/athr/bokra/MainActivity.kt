@@ -79,6 +79,9 @@ class MainActivity : ComponentActivity() {
             databaseEnabled = true
             allowFileAccess = false
             textZoom = 100
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
         }
         web.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =

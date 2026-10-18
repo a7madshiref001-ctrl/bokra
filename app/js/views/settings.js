@@ -14,7 +14,7 @@ export const LEVELS = {
   4: 'ويرجع وقت الأذان',
   5: 'كل 20 دقيقة',
 };
-export const VERSION = '1.4.0';
+export const VERSION = '1.5.0';
 
 export function render() {
   return `${header('Settings')}

@@ -20,8 +20,8 @@ export function render() {
   const range = `${fmtDayMonth(parseKey(keys[0]))} – ${fmtDayMonth(parseKey(keys[6]))}`;
   return `${header('Week', range, nav)}
   <div class="cols2">
-    <div>${shiftsCard(keys, k)}${goalsCard(base)}</div>
-    <div>${habitsCard(keys, k)}${moneyCard(keys, k)}</div>
+    <div>${shiftsCard(keys, k)}</div>
+    <div>${goalsCard(base)}${moneyCard(keys, k)}</div>
   </div>`;
 }
 
@@ -65,33 +65,6 @@ function goalsCard(base) {
         ${bar(r, r >= 1 ? 'thick ok-bar' : 'thick')}</div>`;
     }).join('') : empty('', 'goals')}
   </div>`;
-}
-
-// every habit × every day of the week as small squares: filled = done, faint = partly, outline = still to come
-function habitsCard(keys, k) {
-  const list = M.trackers().filter((t) => !['money', 'number'].includes(t.data.type));
-  const cell = (t, kk) => {
-    const d = t.data;
-    if (kk > k) return '<i class="hc future"></i>';
-    if (d.period !== 'week' && !M.activeOn(t, kk)) return '<i class="hc rest"></i>';
-    const v = M.entry(t.id, kk);
-    if (d.type === 'check') return `<i class="hc ${v === 1 ? 'on' : ''}"></i>`;
-    if (d.type === 'streak') return `<i class="hc ${v === 1 ? 'slip' : kk >= (d.start || kk) ? 'on' : ''}"></i>`;
-    if (d.type === 'sleep') return `<i class="hc ${v && d.target && v.woke <= d.target ? 'on' : ''}" style="--r:${v ? 0.45 : 0}"></i>`;
-    const n = Number(v) || 0;
-    if (d.period === 'week') return `<i class="hc ${n > 0 ? 'on' : ''}"></i>`;
-    const tg = Number(d.target) || 0;
-    if (tg && n >= tg) return '<i class="hc on"></i>';
-    return `<i class="hc" style="--r:${tg ? Math.min(1, n / tg).toFixed(2) : 0}"></i>`;
-  };
-  const L = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
-  const head = keys.map((kk) => `<span class="${kk === k ? 'is-today' : ''}">${L[parseKey(kk).getDay()]}</span>`).join('');
-  return `<div class="card" data-key="hgrid">${ch('Habits', 'activity')}
-    <div class="hg">
-      <div class="hg-row hg-head"><span></span><span class="hg-cells">${head}</span></div>
-      ${list.map((t) => `<div class="hg-row" data-act="tracker-edit" data-id="${t.id}"><span class="hg-name">${icon(t.data.icon || 'diamond', 16)}<span>${esc(t.data.name)}</span></span>
-        <span class="hg-cells">${keys.map((kk) => cell(t, kk)).join('')}</span></div>`).join('')}
-    </div></div>`;
 }
 
 function moneyCard(keys, k) {

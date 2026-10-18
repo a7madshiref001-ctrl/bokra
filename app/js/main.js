@@ -14,12 +14,12 @@ import { startTimer, stopTimer, timers, elapsed, isComplete, afterChange } from 
 import { claudePrompt } from './views/review.js';
 import { LEVELS } from './views/settings.js';
 import * as today from './views/today.js';
-import * as tasks from './views/tasks.js';
+import * as habits from './views/habits.js';
 import * as week from './views/week.js';
 import * as review from './views/review.js';
 import * as settings from './views/settings.js';
 
-const VIEWS = { today, tasks, week, review, settings };
+const VIEWS = { today, habits, week, review, settings };
 let current = 'today';
 let deferred = false;
 
@@ -48,7 +48,7 @@ function render(reset = false) {
 }
 function route() {
   const h = (location.hash || '#today').slice(1);
-  current = VIEWS[h] ? h : 'today';
+  current = VIEWS[h] ? h : 'today'; // old #tasks links land on Today, where tasks live now
   if (current !== 'week') week.state.off = 0;
   render(true);
 }

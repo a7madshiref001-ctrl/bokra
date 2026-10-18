@@ -1,26 +1,20 @@
+// Opening screen: the prayer you're in (with the day arc), then today's tasks.
 import * as M from '../model.js';
 import { header, ch, empty } from '../ui.js';
 import { icon } from '../icons.js';
-import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm, esc } from '../util.js';
-import { taskRow, habitRow, isComplete } from './parts.js';
+import { dayArc } from '../illus.js';
+import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm, esc, shiftKey } from '../util.js';
+import { taskRow } from './parts.js';
 
 export function render() {
   const k = M.today();
   const d = parseKey(k);
   const sh = M.shift(k);
   const chip = sh ? `<span class="hchip">${icon(sh.off ? 'sun' : 'briefcase', 15)}${sh.off ? 'إجازة' : `${fmtHm(sh.start)} – ${fmtHm(sh.end)}`}</span>` : '';
-  const list = M.trackers().filter((t) => t.data.period === 'week' || M.activeOn(t, k));
-  const doneN = list.filter((t) => isComplete(t, k)).length;
   return `${header('Today', `${fmtLongDate(d)} · ${fmtHijri(d)}`, chip)}
   <div class="today-grid">
-    <section class="a-pray">${prayerCard(k)}</section>
-    <section class="a-top3">${voiceCard()}${top3Card(k)}</section>
-    <section class="a-trk">
-      <div class="sec en">Habits <span class="count num">${doneN}/${list.length}</span></div>
-      <div class="habits">${list.map((t) => habitRow(t, k)).join('')}
-        <button class="habit add" data-act="add-tracker" data-key="add" aria-label="حاجة جديدة"><div class="hrow"><span class="hic">${icon('plus', 20)}</span></div></button>
-      </div>
-    </section>
+    <section class="a-pray">${prayerCard(k)}${voiceCard()}</section>
+    <section class="a-tasks">${top3Card(k)}${tasksCard(k)}${inboxCard()}${laterCard(k)}</section>
   </div>`;
 }
 
@@ -34,12 +28,13 @@ function prayerCard(k) {
     return `<button class="pchip ${cls}" data-act="pray-toggle" data-k="${k}" data-key="${x.key}" aria-pressed="${x.done}" aria-label="${x.name}">
       <b>${x.short}</b><span>${fmtClock(x.time).replace(/ [صم]$/, '')}</span></button>`;
   }).join('');
-  return `<div class="card pray">
+  return `<div class="card pray" data-key="pray">
     <div class="pray-top">
       <div><p class="pray-name">${p.name}</p>
         <p class="pray-meta">${icon('clock', 15)}${current ? `دخل من ${fmtMinutes(mins)}` : `<b>بعد ${fmtMinutes(mins)}</b>`}</p></div>
       ${current ? `<button class="btn btn-accent pray-cta" data-act="pray" data-k="${k}" data-key="${current.key}">${icon('check', 20)} صليت</button>` : ''}
     </div>
+    ${dayArc(list, now, current?.key)}
     <div class="pray-row">${row}</div>
   </div>`;
 }
@@ -58,10 +53,48 @@ function voiceCard() {
 function top3Card(k) {
   const list = M.top3(k);
   const done = list.filter((t) => t.data.done).length;
-  const others = M.todayTasks(k).filter((t) => !t.data.done).length;
-  const right = `${list.length ? `<span class="count num">${done}/${list.length}</span>` : ''}<button class="ibtn" data-act="pick-top3" data-k="${k}" aria-label="اختار">${icon(list.length ? 'edit' : 'plus', 17)}</button>`;
-  return `<div class="card">${ch('Top 3', 'diamond', `<span class="ch-r">${right}</span>`)}
+  const right = `<span class="ch-r">${list.length ? `<span class="count num">${done}/${list.length}</span>` : ''}<button class="ibtn" data-act="pick-top3" data-k="${k}" aria-label="اختار">${icon(list.length ? 'edit' : 'plus', 17)}</button></span>`;
+  return `<div class="card" data-key="top3">${ch('Top 3', 'diamond', right)}
     ${list.length ? `<ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul>` : empty('', 'top3')}
-    ${others ? `<a class="more-link" href="#tasks">${icon('list', 16)}<span>${others} مهام تانية النهارده</span>${icon('chevL', 16)}</a>` : ''}
   </div>`;
+}
+
+function tasksCard(k) {
+  const list = M.todayTasks(k);
+  const left = list.filter((t) => !t.data.done).length;
+  return `<div class="card" data-key="tasks">${ch('Tasks', 'list', left ? `<span class="count num">${left}</span>` : '')}
+    ${list.length ? `<ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul>` : ''}
+    <form class="quick" data-form="quick-task" data-date="${k}">
+      <input class="in" name="title" placeholder="مهمة جديدة…" autocomplete="off" enterkeyhint="done" aria-label="مهمة جديدة">
+      <button class="btn btn-primary" aria-label="ضيف">${icon('plus')}</button>
+    </form>
+  </div>`;
+}
+
+// what's not for today, folded so the screen stays about today
+function laterCard(k) {
+  const open = M.tasks().filter((t) => !t.data.done).sort(M.byTask);
+  const tom = shiftKey(k, 1);
+  const groups = [
+    ['Tomorrow', 'moon', open.filter((t) => t.data.date === tom)],
+    ['Upcoming', 'calendar', open.filter((t) => t.data.date && t.data.date > tom)],
+    ['Someday', 'inbox', open.filter((t) => !t.data.date)],
+  ].filter(([, , l]) => l.length);
+  const n = groups.reduce((s, [, , l]) => s + l.length, 0);
+  if (!n) return '';
+  return `<div class="card" data-key="later"><details class="fold"><summary>${ch('Later', 'clock', `<span class="ch-r"><span class="count num">${n}</span>${icon('chevD', 16)}</span>`)}</summary>
+    ${groups.map(([name, ic, l]) => `<p class="sub en">${icon(ic, 14)}${name}</p><ul class="tl">${l.map((t) => taskRow(t, k)).join('')}</ul>`).join('')}
+  </details></div>`;
+}
+
+function inboxCard() {
+  const items = M.inbox();
+  if (!items.length) return '';
+  return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="count num">${items.length}</span>`)}
+    <ul class="tl">${items.map((i) => `<li class="task" data-key="${i.id}">
+      <span class="ini">${icon(i.data.source === 'voice' ? 'mic' : 'pen', 16)}</span>
+      <div class="t-main"><div class="t-title">${esc(i.data.text)}</div></div>
+      <button class="ibtn" data-act="inbox-task" data-id="${i.id}" aria-label="حوّلها لمهمة">${icon('plus', 17)}</button>
+      <button class="ibtn" data-act="inbox-del" data-id="${i.id}" aria-label="امسح">${icon('trash', 17)}</button>
+    </li>`).join('')}</ul></div>`;
 }
