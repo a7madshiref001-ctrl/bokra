@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="start"
                 android:text="الصلاة الجاية"
-                android:textColor="#767676"
+                android:textColor="#8E8983"
                 android:textSize="12sp" />
 
             <TextView
@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="start"
                 android:text="العصر"
-                android:textColor="#111111"
+                android:textColor="#F7F5F2"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
@@ -55,12 +55,12 @@
             android:id="@+id/w_pray"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
-            android:background="@drawable/btn_dark"
+            android:background="@drawable/btn_accent"
             android:gravity="center"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:text="صليت"
-            android:textColor="#F7F5F2"
+            android:textColor="#FFFFFF"
             android:textSize="15sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -108,8 +108,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="start"
-        android:text="أهم 3 النهارده"
-        android:textColor="#767676"
+        android:text="Top 3"
+        android:textColor="#8E8983"
         android:textSize="12sp" />
 
     <LinearLayout android:id="@+id/w_r0" style="@style/WRow">
@@ -132,7 +132,7 @@
         android:layout_marginTop="8dp"
         android:gravity="start"
         android:text="اختار أهم 3 من التطبيق"
-        android:textColor="#4B4B4B"
+        android:textColor="#C4BFB8"
         android:textSize="14sp"
         android:visibility="gone" />
 </LinearLayout>

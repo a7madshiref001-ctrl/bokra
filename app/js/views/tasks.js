@@ -1,5 +1,5 @@
 import * as M from '../model.js';
-import { header, empty } from '../ui.js';
+import { header, ch, empty } from '../ui.js';
 import { icon } from '../icons.js';
 import { esc, shiftKey } from '../util.js';
 import { taskRow } from './parts.js';
@@ -18,12 +18,12 @@ export function render() {
   const open = all.filter((t) => !t.data.done).sort(M.byTask);
   const tom = shiftKey(k, 1);
   const groups = [
-    ['متأخرة', open.filter((t) => t.data.date && t.data.date < k)],
-    ['النهارده', open.filter((t) => t.data.date === k)],
-    ['بكرة', open.filter((t) => t.data.date === tom)],
-    ['الأيام الجاية', open.filter((t) => t.data.date && t.data.date > tom)],
-    ['من غير ميعاد', open.filter((t) => !t.data.date)],
-  ].filter(([, l]) => l.length);
+    ['Overdue', 'clock', open.filter((t) => t.data.date && t.data.date < k)],
+    ['Today', 'sun', open.filter((t) => t.data.date === k)],
+    ['Tomorrow', 'moon', open.filter((t) => t.data.date === tom)],
+    ['Upcoming', 'calendar', open.filter((t) => t.data.date && t.data.date > tom)],
+    ['Someday', 'inbox', open.filter((t) => !t.data.date)],
+  ].filter(([, , l]) => l.length);
   const done = all.filter((t) => t.data.done && t.data.done_at && Date.now() - new Date(t.data.done_at) < 7 * 864e5)
     .sort((a, b) => b.data.done_at.localeCompare(a.data.done_at));
 
@@ -32,20 +32,20 @@ export function render() {
     <input class="in" name="title" placeholder="مهمة جديدة للنهارده" autocomplete="off" enterkeyhint="done" aria-label="مهمة جديدة">
     <button class="btn btn-primary" aria-label="ضيف">${icon('plus')}</button>
   </form>
-  <p class="hint">عايز ميعاد أو تذكير؟ دوس على <b>+</b> تحت واختار «مهمة».</p>
+  <p class="hint">عايز ميعاد أو تذكير؟ دوس على <b>+</b> واختار Task.</p>
   ${inboxCard()}
-  ${groups.map(([name, list]) => `<div class="card"><div class="card-h"><h2>${name}</h2><span class="meta">${list.length}</span></div>
+  ${groups.map(([name, ic, list]) => `<div class="card" data-key="g-${name}">${ch(name, ic, `<span class="meta">${list.length}</span>`)}
      <ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul></div>`).join('')}
-  ${!groups.length && !M.inbox().length ? empty('مفيش مهام مفتوحة. ضيف واحدة من فوق.') : ''}
-  ${done.length ? `<div class="card"><details><summary class="card-h"><h2>خلصت الأسبوع ده</h2><span class="meta">${done.length}</span></summary>
+  ${!groups.length && !M.inbox().length ? `<div class="card">${empty('مفيش مهام مفتوحة. ضيف واحدة من فوق.', 'tasks')}</div>` : ''}
+  ${done.length ? `<div class="card" data-key="done"><details><summary>${ch('Done this week', 'check', `<span class="meta">${done.length} ${icon('chevD', 14)}</span>`)}</summary>
      <ul class="tl">${done.map((t) => taskRow(t, k)).join('')}</ul></details></div>` : ''}`;
 }
 
 function inboxCard() {
   const items = M.inbox();
   if (!items.length) return '';
-  return `<div class="card"><div class="card-h"><h2>دماغي</h2><span class="meta">${items.length} مستنيين ترتيب</span></div>
-    <ul class="tl">${items.map((i) => `<li class="task">
+  return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="meta">دماغي · ${items.length}</span>`)}
+    <ul class="tl">${items.map((i) => `<li class="task" data-key="${i.id}">
       <div class="t-main"><div class="t-title">${esc(i.data.text)}</div><div class="t-meta">${ago(i.data.created_at)}</div></div>
       <button class="ibtn" data-act="inbox-task" data-id="${i.id}" aria-label="حوّلها لمهمة">${icon('plus', 18)}</button>
       <button class="ibtn" data-act="inbox-done" data-id="${i.id}" aria-label="خلاص">${icon('check', 18)}</button>

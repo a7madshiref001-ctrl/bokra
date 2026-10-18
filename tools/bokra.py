@@ -5,14 +5,13 @@
   python tools/bokra.py pull [--days 14]  compact JSON of the last N days, for a review
   python tools/bokra.py push FILE.json    upload {"items":[...]} (reports, suggestions, notes)
   python tools/bokra.py whoami            check the connection
+  python tools/bokra.py login             one time: paste the anon key, type email + password (password is never saved)
 
-Reads bokra/.env:
-  SUPABASE_URL=https://xxxx.supabase.co
-  SUPABASE_ANON_KEY=eyJ...
-  BOKRA_EMAIL=...
-  BOKRA_PASSWORD=...
+Reads bokra/.env (SUPABASE_URL, SUPABASE_ANON_KEY; BOKRA_EMAIL/BOKRA_PASSWORD optional)
+and keeps a renewable session in bokra/.bokra-session.json.
 """
 import datetime as dt
+import getpass
 import json
 import pathlib
 import sys
@@ -47,7 +46,23 @@ def load_env():
 
 
 def configured(env):
-    return all(env.get(k) for k in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "BOKRA_EMAIL", "BOKRA_PASSWORD"))
+    if not (env.get("SUPABASE_URL") and env.get("SUPABASE_ANON_KEY")):
+        return False
+    return SESSION.exists() or bool(env.get("BOKRA_EMAIL") and env.get("BOKRA_PASSWORD"))
+
+
+def set_env(key, value):
+    lines = ENV.read_text(encoding="utf-8").splitlines() if ENV.exists() else []
+    out, done = [], False
+    for line in lines:
+        if line.split("=", 1)[0].strip() == key:
+            out.append(f"{key}={value}")
+            done = True
+        else:
+            out.append(line)
+    if not done:
+        out.append(f"{key}={value}")
+    ENV.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
 def http(method, url, headers, body=None, timeout=15):
@@ -58,24 +73,49 @@ def http(method, url, headers, body=None, timeout=15):
         return json.loads(raw) if raw else None
 
 
+def save_session(j):
+    s = {"access_token": j["access_token"], "refresh_token": j.get("refresh_token"),
+         "expires_at": j.get("expires_at") or time.time() + j.get("expires_in", 3600),
+         "user_id": j["user"]["id"], "email": j["user"].get("email")}
+    SESSION.write_text(json.dumps(s), encoding="utf-8")
+    return s
+
+
 def login(env, timeout=15):
+    url = env["SUPABASE_URL"].rstrip("/")
+    headers = {"apikey": env["SUPABASE_ANON_KEY"], "Content-Type": "application/json"}
+    s = None
     try:
         s = json.loads(SESSION.read_text(encoding="utf-8"))
         if s.get("expires_at", 0) - 120 > time.time():
             return s
     except Exception:
-        pass
-    url = env["SUPABASE_URL"].rstrip("/")
-    j = http("POST", f"{url}/auth/v1/token?grant_type=password",
-             {"apikey": env["SUPABASE_ANON_KEY"], "Content-Type": "application/json"},
-             {"email": env["BOKRA_EMAIL"], "password": env["BOKRA_PASSWORD"]}, timeout)
-    s = {"access_token": j["access_token"], "expires_at": j.get("expires_at") or time.time() + j.get("expires_in", 3600),
-         "user_id": j["user"]["id"], "email": j["user"].get("email")}
-    try:
-        SESSION.write_text(json.dumps(s), encoding="utf-8")
-    except Exception:
-        pass
-    return s
+        s = None
+    if s and s.get("refresh_token"):
+        try:
+            return save_session(http("POST", f"{url}/auth/v1/token?grant_type=refresh_token", headers, {"refresh_token": s["refresh_token"]}, timeout))
+        except urllib.error.HTTPError:
+            pass  # refresh token no longer valid, fall back below
+    if env.get("BOKRA_EMAIL") and env.get("BOKRA_PASSWORD"):
+        return save_session(http("POST", f"{url}/auth/v1/token?grant_type=password", headers,
+                                 {"email": env["BOKRA_EMAIL"], "password": env["BOKRA_PASSWORD"]}, timeout))
+    raise SystemExit("BOKRA: الجلسة خلصت. شغّل: python C:/Users/Ahmed/bokra/tools/bokra.py login")
+
+
+def cmd_login(env):
+    url = env.get("SUPABASE_URL") or "https://mjadsoyufdddbqezgrcy.supabase.co"
+    if not env.get("SUPABASE_URL"):
+        set_env("SUPABASE_URL", url)
+    key = env.get("SUPABASE_ANON_KEY")
+    if not key:
+        key = input("الصق anon public key (من Supabase → Settings → API Keys → Legacy): ").strip()
+        set_env("SUPABASE_ANON_KEY", key)
+    email = input("إيميل BOKRA: ").strip()
+    password = getpass.getpass("باسورد BOKRA (مش هيتحفظ): ")
+    j = http("POST", f"{url.rstrip('/')}/auth/v1/token?grant_type=password",
+             {"apikey": key, "Content-Type": "application/json"}, {"email": email, "password": password})
+    s = save_session(j)
+    print(f"تمام. Claude متوصل بـ {s['email']}.")
 
 
 def rest_headers(env, s, extra=None):
@@ -255,8 +295,15 @@ def main():
     if cmd == "brief":
         cmd_brief(env)
         return
+    if cmd == "login":
+        try:
+            cmd_login(env)
+        except urllib.error.HTTPError as e:
+            print(f"الدخول فشل ({e.code}): {e.read().decode('utf-8', 'replace')[:200]}", file=sys.stderr)
+            sys.exit(1)
+        return
     if not configured(env):
-        print(f"BOKRA مش متوصل: املا {ENV} (SUPABASE_URL, SUPABASE_ANON_KEY, BOKRA_EMAIL, BOKRA_PASSWORD).")
+        print("BOKRA مش متوصل: شغّل مرة واحدة: python C:/Users/Ahmed/bokra/tools/bokra.py login")
         sys.exit(2)
     try:
         if cmd == "pull":

@@ -9,17 +9,17 @@ export function taskRow(t, k) {
   const d = t.data;
   const late = !d.done && d.date && d.date < k;
   const meta = [];
-  if (d.date && d.date !== k) meta.push(late ? `<span class="late">متأخرة · ${relDay(d.date, k)}</span>` : relDay(d.date, k));
-  if (d.time) meta.push(fmtHm(d.time));
-  if (d.area) meta.push(esc(d.area));
-  if (d.source === 'claude') meta.push('من Claude');
-  return `<li class="task ${d.done ? 'done' : ''}">
+  if (d.date && d.date !== k) meta.push(late ? `<span class="late tag">${icon('clock', 14)}متأخرة · ${relDay(d.date, k)}</span>` : `<span class="tag">${icon('calendar', 14)}${relDay(d.date, k)}</span>`);
+  if (d.time) meta.push(`<span class="tag">${icon('bell', 14)}${fmtHm(d.time)}</span>`);
+  if (d.area) meta.push(`<span class="tag">${esc(d.area)}</span>`);
+  if (d.source === 'claude') meta.push(`<span class="tag">${icon('sparkles', 14)}Claude</span>`);
+  return `<li class="task ${d.done ? 'done' : ''}" data-key="${t.id}">
     <button class="cb" data-act="task-toggle" data-id="${t.id}" aria-label="${d.done ? 'رجّعها' : 'خلصت'}">${icon('check', 16)}</button>
     <div class="t-main" data-act="task-edit" data-id="${t.id}">
       <div class="t-title">${esc(d.title)}</div>
-      ${meta.length ? `<div class="t-meta">${meta.join(' · ')}</div>` : ''}
+      ${meta.length ? `<div class="t-meta">${meta.join('')}</div>` : ''}
     </div>
-    <button class="star ${d.top3 === k ? 'on' : ''}" data-act="task-top3" data-id="${t.id}" data-k="${k}" aria-label="من أهم 3">${icon('diamond', 18)}</button>
+    <button class="star ${d.top3 === k ? 'on' : ''}" data-act="task-top3" data-id="${t.id}" data-k="${k}" aria-label="Top 3">${icon('diamond', 18)}</button>
   </li>`;
 }
 
@@ -53,13 +53,13 @@ export function tile(t, k) {
       const on = M.entry(t.id, k) === 1;
       if (weekly) { v = `${p.value}<small>من ${p.target} الأسبوع ده</small>`; b = bar(p.ratio); met = p.ratio >= 1; }
       else { v = on ? 'اتعمل' : 'لسه'; vCls = 'ar'; met = on; }
-      a = `<button class="btn btn-block ${on ? 'on' : ''}" ${btnAttrs('trk-check', t, k)}>${on ? `${icon('check', 16)} اتعمل النهارده` : 'تم'}</button>`;
+      a = `<button class="btn btn-block ${on ? 'on' : ''}" ${btnAttrs('trk-check', t, k)}>${on ? `${icon('check', 16)} اتعمل` : `${icon('check', 16)} تم`}</button>`;
       break;
     }
     case 'count': {
       const val = Number(M.entry(t.id, k)) || 0;
-      v = weekly ? `${p.value}<small>من ${p.target} ${esc(d.unit || '')} الأسبوع ده</small>` : `${val}<small>${d.target ? `من ${d.target} ` : ''}${esc(d.unit || '')}</small>`;
-      if (weekly && val) s = `النهارده ${val}`;
+      v = weekly ? `${p.value}<small>من ${p.target} الأسبوع ده</small>` : `${val}<small>${d.target ? `من ${d.target} ` : ''}${esc(d.unit || '')}</small>`;
+      if (weekly && val) s = `النهارده ${val} ${esc(d.unit || '')}`;
       a = `<button class="btn sq" ${btnAttrs('trk-inc', t, k, 'data-n="-1"')} aria-label="ناقص واحد">${icon('minus', 16)}</button>
            <button class="btn" ${btnAttrs('trk-inc', t, k, 'data-n="1"')}>${icon('plus', 16)} ${esc(d.unit || '')}</button>`;
       b = bar(p.ratio); met = p.ratio >= 1;
@@ -72,8 +72,8 @@ export function tile(t, k) {
       a = run
         ? `<button class="btn btn-block on" ${btnAttrs('timer-stop', t, k)}>${icon('stop', 16)} <span class="num" data-timer="${t.id}">${elapsed(run)}</span></button>`
         : `<button class="btn" ${btnAttrs('trk-inc', t, k, 'data-n="10"')}>+10</button>
-           <button class="btn" ${btnAttrs('trk-number', t, k)}>${icon('edit', 16)}</button>
-           <button class="btn" ${btnAttrs('timer-start', t, k)} aria-label="ابدأ تايمر">${icon('play', 16)}</button>`;
+           <button class="btn sq" ${btnAttrs('trk-number', t, k)} aria-label="اكتب الدقايق">${icon('edit', 16)}</button>
+           <button class="btn sq" ${btnAttrs('timer-start', t, k)} aria-label="ابدأ تايمر">${icon('play', 16)}</button>`;
       b = bar(p.ratio); met = p.ratio >= 1;
       break;
     }
@@ -81,12 +81,12 @@ export function tile(t, k) {
       const val = M.entry(t.id, k);
       if (d.auto === 'screen_time') {
         v = val == null ? '—' : `${(val / 60).toFixed(1)}<small>ساعة</small>`;
-        s = isNative ? 'بيتحسب لوحده من الموبايل' : 'بيتحسب لوحده على الموبايل';
+        s = isNative ? 'بيتحسب لوحده' : 'بيتحسب لوحده على الموبايل';
         if (d.target) s += ` · الحد ${fmtMinutes(d.target)}`;
       } else {
         v = val == null ? '—' : `${val}<small>${esc(d.unit || '')}</small>`;
       }
-      a = `<button class="btn btn-block" ${btnAttrs('trk-number', t, k)}>سجّل</button>`;
+      a = `<button class="btn btn-block" ${btnAttrs('trk-number', t, k)}>${icon('edit', 16)} سجّل</button>`;
       if (d.target && val != null) b = bar(p.ratio);
       break;
     }
@@ -102,7 +102,7 @@ export function tile(t, k) {
       const days = M.streakDays(t, k);
       v = `${days}<small>يوم</small>`;
       if (d.private) vCls = 'hide';
-      s = d.private ? 'محدش شايفه غيرك' : `أطول مرة: ${M.bestStreak(t, k)} يوم`;
+      s = d.private ? 'محدش شايفه غيرك · دوس عشان تشوف' : `أطول مرة: ${M.bestStreak(t, k)} يوم`;
       a = `<button class="btn btn-block" ${btnAttrs('trk-slip', t, k)}>وقعت</button>`;
       if (d.target) b = bar(p.ratio);
       break;
@@ -113,14 +113,15 @@ export function tile(t, k) {
       v = h == null ? 'لسه' : `${h}<small>ساعة</small>`;
       if (h == null) vCls = 'ar';
       s = e ? `نمت ${fmtHm(e.slept)} · صحيت ${fmtHm(e.woke)}` : `هدف الصحيان ${fmtHm(d.target)}`;
-      a = `<button class="btn btn-block" ${btnAttrs('trk-sleep', t, k)}>${e ? 'عدّل' : 'سجّل نومة امبارح'}</button>`;
+      a = `<button class="btn btn-block" ${btnAttrs('trk-sleep', t, k)}>${icon('moon', 16)} ${e ? 'عدّل' : 'سجّل نومك'}</button>`;
+      met = e && d.target ? e.woke <= d.target : false;
       break;
     }
     default: v = '—';
   }
 
-  return `<div class="tile ${met ? 'met' : ''}">
-    <div class="tile-h" data-act="tracker-edit" data-id="${t.id}">${icon(d.icon || 'diamond', 18)}<span>${esc(d.name)}</span></div>
+  return `<div class="tile ${met ? 'met' : ''}" data-key="${t.id}">
+    <div class="tile-h" data-act="tracker-edit" data-id="${t.id}"><span class="ti">${icon(met ? 'check' : d.icon || 'diamond', 18)}</span><span>${esc(d.name)}</span></div>
     <div class="tile-v ${vCls}" ${vCls === 'hide' ? 'data-act="reveal"' : ''}>${v}</div>
     ${s ? `<div class="tile-s">${s}</div>` : ''}
     ${b}

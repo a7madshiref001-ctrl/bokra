@@ -1,10 +1,11 @@
 import * as M from '../model.js';
 import * as sync from '../sync.js';
-import { header, chips } from '../ui.js';
+import { header, chips, ch } from '../ui.js';
 import { icon } from '../icons.js';
 import { esc, fmtClock } from '../util.js';
 import { CITIES } from '../prayer.js';
 import { isNative, callJSON } from '../native.js';
+import { SUPABASE_URL, SUPABASE_KEYS_PAGE } from '../config.js';
 
 export const LEVELS = {
   1: 'وقت الصلاة بس، وتقدر تمسحه',
@@ -13,10 +14,10 @@ export const LEVELS = {
   4: 'ويرجع يفكرك وقت الأذان لو لسه',
   5: 'ويفضل يفكرك كل 20 دقيقة',
 };
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 export function render() {
-  return `${header('Settings', 'المزامنة، الصلاة، والحاجات اللي بتتابعها')}
+  return `${header('Settings', 'المزامنة، والصلاة، والحاجات اللي بتتابعها')}
   <div class="cols2">
     <div>${syncCard()}${prayerCard()}${isNative ? phoneCard() : ''}</div>
     <div>${trackersCard()}${backupCard()}
@@ -30,10 +31,12 @@ function syncCard() {
   const st = sync.state;
   let body;
   if (!cfg) {
-    body = `<p class="hint" style="margin-top:0">عشان الموبايل والكمبيوتر يبقوا نفس الداتا، و Claude يقدر يراجع. الخطوات في دليل التشغيل.</p>
+    body = `<p class="hint" style="margin-top:0">خطوة واحدة: افتح صفحة المفاتيح، ودوس <b>Copy</b> جنب <b class="en">anon public</b>، والصقه هنا.</p>
+      <div class="actions" style="margin-top:12px"><a class="btn" href="${SUPABASE_KEYS_PAGE}" target="_blank" rel="noopener">${icon('external', 18)} افتح صفحة المفاتيح</a></div>
       <form data-form="sync-cfg">
-        <div class="field"><label class="lbl" for="s-url">Project URL</label><input id="s-url" class="in ltr" name="url" placeholder="https://xxxx.supabase.co" required></div>
-        <div class="field"><label class="lbl" for="s-key">anon public key</label><input id="s-key" class="in ltr" name="key" placeholder="eyJhbGciOi…" required></div>
+        <div class="field"><label class="lbl" for="s-key">anon public key</label><input id="s-key" class="in ltr" name="key" placeholder="eyJhbGciOi…" required autocomplete="off"></div>
+        <details style="margin-top:12px"><summary class="meta" style="cursor:pointer">Project URL</summary>
+          <input class="in ltr" name="url" value="${SUPABASE_URL}" style="margin-top:8px"></details>
         <div class="actions"><button class="btn btn-primary">احفظ</button></div>
       </form>`;
   } else if (!ses) {
@@ -53,13 +56,13 @@ function syncCard() {
       <div class="srow"><span class="meta en">${esc(ses.user?.email || '')}</span></div>
       <div class="actions"><button class="btn btn-primary" data-act="sync-now">${icon('refresh', 18)} زامن دلوقتي</button><button class="btn" data-act="sync-out">${icon('logout', 18)} خروج</button></div>`;
   }
-  return `<div class="card"><div class="card-h"><h2>المزامنة</h2>${icon('cloud')}</div>${body}</div>`;
+  return `<div class="card" data-key="sync">${ch('Sync', 'cloud')}${body}</div>`;
 }
 
 function prayerCard() {
   const s = M.settings();
   const known = CITIES.find((c) => c.name === s.city);
-  return `<div class="card"><div class="card-h"><h2>الصلاة والتذكيرات</h2>${icon('mosque')}</div>
+  return `<div class="card" data-key="prayer">${ch('الصلاة والتذكيرات', 'mosque', '', true)}
   <form data-form="settings-prayer">
     <div class="field"><label class="lbl" for="p-city">المدينة</label>
       <select id="p-city" class="in" name="city">${CITIES.map((c) => `<option ${c.name === s.city ? 'selected' : ''}>${c.name}</option>`).join('')}<option value="custom" ${known ? '' : 'selected'}>مكان تاني</option></select></div>
@@ -84,7 +87,7 @@ function phoneCard() {
   const p = callJSON('permissions') || {};
   const row = (ok, name, sub, which) => `<div class="srow"><div><b style="font-weight:500">${name}</b><p class="meta">${sub}</p></div>
     ${ok ? `<span class="status ok"><i></i>تمام</span>` : `<button class="btn btn-sm" data-act="native-settings" data-which="${which}">افتح</button>`}</div>`;
-  return `<div class="card"><div class="card-h"><h2>الموبايل</h2>${icon('phone')}</div>
+  return `<div class="card" data-key="phone">${ch('Phone', 'phone')}
     ${row(p.notifications, 'الإشعارات', 'عشان تذكير الصلاة والمهام', 'notifications')}
     ${row(p.exact, 'التذكير في ميعاده بالظبط', 'من غيره التذكير ممكن يتأخر', 'exact')}
     ${row(p.battery, 'البطارية', 'Realme بيقفل التطبيقات اللي في الخلفية', 'battery')}
@@ -97,21 +100,21 @@ function trackersCard() {
   const act = all.filter((t) => !t.data.archived);
   const arch = all.filter((t) => t.data.archived);
   const row = (t) => `<div class="srow ${t.data.archived ? 'arch' : ''}">
-    <div class="nm">${icon(t.data.icon || 'diamond', 18)}<span>${esc(t.data.name)}</span><span class="meta">${M.TYPES[t.data.type]?.label || ''}</span></div>
+    <div class="nm"><span class="ti">${icon(t.data.icon || 'diamond', 18)}</span><span>${esc(t.data.name)}</span><span class="meta">${M.TYPES[t.data.type]?.label || ''}</span></div>
     <div class="tools">
       ${t.data.archived ? `<button class="btn btn-sm" data-act="trk-restore" data-id="${t.id}">رجّعها</button>` : `
       <button class="ibtn" data-act="trk-move" data-id="${t.id}" data-n="-1" aria-label="لفوق">${icon('chevU', 16)}</button>
       <button class="ibtn" data-act="trk-move" data-id="${t.id}" data-n="1" aria-label="لتحت">${icon('chevD', 16)}</button>`}
       <button class="ibtn" data-act="tracker-edit" data-id="${t.id}" aria-label="عدّل">${icon('edit', 16)}</button>
     </div></div>`;
-  return `<div class="card"><div class="card-h"><h2>الحاجات اللي بتتابعها</h2><button class="btn btn-sm" data-act="add-tracker">${icon('plus', 16)} جديدة</button></div>
+  return `<div class="card" data-key="trackers">${ch('Trackers', 'activity', `<button class="btn btn-sm" data-act="add-tracker">${icon('plus', 16)} جديدة</button>`)}
     ${act.map(row).join('')}
     ${arch.length ? `<details style="margin-top:8px"><summary class="meta" style="cursor:pointer;padding:8px 0">متشالة (${arch.length})</summary>${arch.map(row).join('')}</details>` : ''}
   </div>`;
 }
 
 function backupCard() {
-  return `<div class="card"><div class="card-h"><h2>نسخة احتياطية</h2>${icon('download')}</div>
+  return `<div class="card" data-key="backup">${ch('Backup', 'download')}
     <p class="hint" style="margin-top:0">كل حاجة متسجلة على الجهاز ده. لو المزامنة شغالة فهي متسجلة على السيرفر كمان.</p>
     <div class="actions"><button class="btn" data-act="backup-out">${icon('download', 18)} صدّر</button><button class="btn" data-act="backup-in">${icon('upload', 18)} استورد</button></div></div>`;
 }

@@ -1,12 +1,12 @@
 import * as M from '../model.js';
-import { header, empty } from '../ui.js';
+import { header, empty, ch } from '../ui.js';
 import { icon } from '../icons.js';
 import { esc, fmtLongDate, parseKey, fmtClock } from '../util.js';
 
 export const TYPE = {
-  morning: { en: 'Morning plan', ar: 'خطة اليوم', plan: 'النهارده' },
-  night: { en: 'Night review', ar: 'مراجعة الليلة', plan: 'بكرة' },
-  weekly: { en: 'Weekly review', ar: 'مراجعة الأسبوع', plan: 'الأسبوع الجاي' },
+  morning: { en: 'Morning plan', ar: 'خطة اليوم', plan: 'النهارده', planEn: 'Today', ic: 'sun' },
+  night: { en: 'Night review', ar: 'مراجعة الليلة', plan: 'بكرة', planEn: 'Tomorrow', ic: 'moon' },
+  weekly: { en: 'Weekly review', ar: 'مراجعة الأسبوع', plan: 'الأسبوع الجاي', planEn: 'Next week', ic: 'calendar' },
 };
 
 function when(iso) {
@@ -24,20 +24,21 @@ export function render() {
   const latest = reps[0];
   const sub = latest ? `آخر ${TYPE[latest.data.type]?.ar || 'مراجعة'} من Claude · ${when(latest.data.created_at)}` : 'Claude بيكتب هنا بعد ما يراجع يومك';
   return `${header('Review', sub)}
-  ${pend.length ? `<div class="sec">مقترحات <span class="meta">وافق بضغطة</span></div>${pend.map(suggCard).join('')}` : ''}
-  ${latest ? reportCard(latest) : `<div class="card">${empty('لسه مفيش مراجعة. أول ما Claude يراجع، التقرير والمقترحات هيظهروا هنا.')}</div>`}
+  ${pend.length ? `<div class="sec en">Suggestions <span class="meta">وافق بضغطة</span></div>${pend.map(suggCard).join('')}` : ''}
+  ${latest ? reportCard(latest) : `<div class="card" data-key="empty">${empty('لسه مفيش مراجعة. أول ما Claude يراجع، التقرير والمقترحات هيظهروا هنا.', 'review')}</div>`}
   ${manualCard()}
-  ${reps.length > 1 ? `<div class="card"><div class="card-h"><h2>مراجعات قديمة</h2></div>${reps.slice(1, 15).map((r) => `<details class="old">
+  ${reps.length > 1 ? `<div class="card" data-key="hist">${ch('History', 'clock')}${reps.slice(1, 15).map((r) => `<details class="old">
       <summary><span>${TYPE[r.data.type]?.ar || 'مراجعة'} · ${when(r.data.created_at)}</span>${icon('chevD', 16)}</summary>
       ${reportBody(r)}</details>`).join('')}</div>` : ''}`;
 }
 
 function suggCard(s) {
-  return `<div class="sugg"><h3>${esc(s.data.title)}</h3>${s.data.why ? `<p>${esc(s.data.why)}</p>` : ''}
+  const ic = { set_target: 'target', create_task: 'list', set_top3: 'diamond', set_shifts: 'briefcase', set_setting: 'sliders', add_tracker: 'plus', update_tracker: 'edit', archive_tracker: 'x', add_goal: 'target', set_goal: 'target', process_inbox: 'inbox' }[s.data.action?.type] || 'sparkles';
+  return `<div class="sugg" data-key="${s.id}"><span class="si">${icon(ic, 18)}</span><div class="sb"><h3>${esc(s.data.title)}</h3>${s.data.why ? `<p>${esc(s.data.why)}</p>` : ''}
     <div class="actions">
-      <button class="btn btn-primary btn-sm" data-act="sugg" data-id="${s.id}" data-yes="1">موافق</button>
+      <button class="btn btn-primary btn-sm" data-act="sugg" data-id="${s.id}" data-yes="1">${icon('check', 16)} موافق</button>
       <button class="btn btn-sm" data-act="sugg" data-id="${s.id}" data-yes="0">لأ</button>
-    </div></div>`;
+    </div></div></div>`;
 }
 
 function reportBody(r) {
@@ -45,17 +46,17 @@ function reportBody(r) {
   const t = TYPE[d.type] || TYPE.night;
   return `${d.verdict ? `<p class="verdict">${esc(d.verdict)}</p>` : ''}
     ${(d.stats || []).length ? `<div class="stats">${d.stats.map((s) => `<div class="stat"><b>${esc(s.value)}</b><span>${esc(s.label)}</span></div>`).join('')}</div>` : ''}
-    ${(d.insights || []).length ? `<div class="sec" style="margin-top:24px">لاحظت</div>${d.insights.map((x) => `<p class="insight">${esc(x)}</p>`).join('')}` : ''}
-    ${(d.plan || []).length ? `<div class="sec" style="margin-top:24px">${t.plan}</div><ol class="plan">${d.plan.map((x, i) => `<li><b>0${i + 1}</b><span>${esc(x)}</span></li>`).join('')}</ol>` : ''}`;
+    ${(d.insights || []).length ? `<div class="sec en" style="margin-top:24px">Insights</div>${d.insights.map((x) => `<p class="insight">${esc(x)}</p>`).join('')}` : ''}
+    ${(d.plan || []).length ? `<div class="sec en" style="margin-top:24px">${t.planEn} <span class="meta">${t.plan}</span></div><ol class="plan">${d.plan.map((x, i) => `<li><b>0${i + 1}</b><span>${esc(x)}</span></li>`).join('')}</ol>` : ''}`;
 }
 
 function reportCard(r) {
   const t = TYPE[r.data.type] || TYPE.night;
-  return `<div class="card"><p class="ov en">${t.en}</p>${reportBody(r)}</div>`;
+  return `<div class="card" data-key="${r.id}"><p class="ov en" style="display:flex;align-items:center;gap:8px">${icon(t.ic, 16)}${t.en}</p>${reportBody(r)}</div>`;
 }
 
 function manualCard() {
-  return `<div class="card"><div class="card-h"><h2>مراجعة يدوية</h2></div>
+  return `<div class="card" data-key="manual">${ch('Manual review', 'copy')}
     <p class="hint" style="margin-top:0">لو المراجعة التلقائية مش شغالة: انسخ بياناتك، ابعتها لـ Claude في أي شات، وبعدين الصق رده هنا.</p>
     <div class="actions">
       <button class="btn" data-act="copy-claude">${icon('copy', 18)} انسخ بياناتي</button>

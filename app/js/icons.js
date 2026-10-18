@@ -49,6 +49,7 @@ const P = {
   pen: '<path d="M12 19l7-7-3-3-7 7v3z"/><path d="M5 21h14"/>',
   hash: '<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
   timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/>',
+  external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   arrow: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
   flame: '<path d="M12 21a7 7 0 0 0 7-7c0-4-3-6-4-9-2 2-2 4-2 4s-2-1-2-4c-3 2-6 5-6 9a7 7 0 0 0 7 7z"/>',
 };

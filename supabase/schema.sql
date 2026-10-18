@@ -19,6 +19,10 @@ create index if not exists bokra_items_kind   on public.bokra_items (user_id, ki
 
 alter table public.bokra_items enable row level security;
 
+-- only signed-in users reach the table (and RLS limits them to their own rows)
+grant select, insert, update, delete on public.bokra_items to authenticated;
+revoke all on public.bokra_items from anon;
+
 drop policy if exists "bokra own select" on public.bokra_items;
 drop policy if exists "bokra own insert" on public.bokra_items;
 drop policy if exists "bokra own update" on public.bokra_items;

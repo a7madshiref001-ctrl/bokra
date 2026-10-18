@@ -84,7 +84,7 @@ class BokraWidget : AppWidgetProvider() {
                     if (done) txt.setSpan(StrikethroughSpan(), 0, title.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     rv.setViewVisibility(ROWS[i], View.VISIBLE)
                     rv.setTextViewText(TITLES[i], txt)
-                    rv.setTextColor(TITLES[i], if (done) Color.parseColor("#767676") else Color.parseColor("#111111"))
+                    rv.setTextColor(TITLES[i], if (done) Color.parseColor("#8E8983") else Color.parseColor("#F7F5F2"))
                     rv.setImageViewResource(CBS[i], if (done) R.drawable.cb_on else R.drawable.cb_off)
                     rv.setOnClickPendingIntent(ROWS[i], Notifier.action(c, ActionReceiver.TASK_TOGGLE, 3100 + i) {
                         it.putExtra("id", task.optString("id"))

@@ -4,8 +4,9 @@ import * as sync from './sync.js';
 import { isNative, call, callJSON } from './native.js';
 import { icon } from './icons.js';
 import { $, $$, toast, debounce, copyText, dlFile, shiftKey } from './util.js';
-import { closeSheet, sheetOpen } from './ui.js';
+import { closeSheet, sheetOpen, morph, enableSheetSwipe, buzz } from './ui.js';
 import { CITIES } from './prayer.js';
+import { SUPABASE_URL } from './config.js';
 import * as S from './sheets.js';
 import { startTimer, stopTimer, timers, elapsed } from './views/parts.js';
 import { claudePrompt } from './views/review.js';
@@ -29,11 +30,16 @@ function render(reset = false) {
   if (!reset && typing()) { deferred = true; return; }
   deferred = false;
   const el = $('#view');
-  const y = window.scrollY;
-  el.innerHTML = VIEWS[current].render();
-  window.scrollTo(0, reset ? 0 : y);
+  const html = VIEWS[current].render();
+  if (reset) {
+    el.innerHTML = html;
+    el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
+    window.scrollTo(0, 0);
+  } else {
+    morph(el, html);
+  }
   $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === current));
-  document.body.classList.toggle('no-capture', current === 'settings');
+  document.body.classList.toggle('no-capture', !['today', 'tasks'].includes(current));
 }
 function route() {
   const h = (location.hash || '#today').slice(1);
@@ -44,7 +50,7 @@ function route() {
 document.addEventListener('focusout', () => setTimeout(() => { if (deferred && !typing()) render(); }, 0));
 
 function chrome() {
-  $$('[data-icon]').forEach((el) => { el.outerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 22); });
+  $$('[data-icon]').forEach((el) => { el.outerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 22, el.className); });
 }
 
 // ---------- native bridge ----------
@@ -84,18 +90,18 @@ const A = {
   'add-inbox': () => { closeSheet(); const i = $('.capture input'); if (i) i.focus(); },
   'add-goal': () => S.goalForm(),
 
-  pray: (el) => { M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
-  'pray-toggle': (el) => { const { k, key } = el.dataset; M.setPrayer(k, key, !M.prayerDone(k, key)); },
+  pray: (el) => { buzz(18); M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
+  'pray-toggle': (el) => { buzz(); const { k, key } = el.dataset; M.setPrayer(k, key, !M.prayerDone(k, key)); },
 
-  'task-toggle': (el) => M.toggleTask(el.dataset.id),
+  'task-toggle': (el) => { buzz(); M.toggleTask(el.dataset.id); },
   'task-edit': (el) => S.taskForm(el.dataset.id),
-  'task-top3': (el) => { if (!M.setTop3(el.dataset.id, el.dataset.k)) toast('أهم 3 مليانين. شيل واحدة الأول'); },
+  'task-top3': (el) => { buzz(); if (!M.setTop3(el.dataset.id, el.dataset.k)) toast('Top 3 مليانين. شيل واحدة الأول'); },
   'task-del': (el) => { db.remove(el.dataset.id); closeSheet(); toast('اتمسحت'); },
   'pick-top3': (el) => S.top3Picker(el.dataset.k),
-  'top3-pick': (el) => { if (!M.setTop3(el.dataset.id, el.dataset.k)) toast('3 بس'); S.top3Picker(el.dataset.k); },
+  'top3-pick': (el) => { buzz(); if (!M.setTop3(el.dataset.id, el.dataset.k)) toast('3 بس'); S.top3Picker(el.dataset.k); },
 
-  'trk-check': (el) => { const { id, k } = el.dataset; M.setEntry(id, k, M.entry(id, k) === 1 ? 0 : 1); },
-  'trk-inc': (el) => { const { id, k, n } = el.dataset; M.setEntry(id, k, Math.max(0, (Number(M.entry(id, k)) || 0) + Number(n))); },
+  'trk-check': (el) => { buzz(); const { id, k } = el.dataset; M.setEntry(id, k, M.entry(id, k) === 1 ? 0 : 1); },
+  'trk-inc': (el) => { buzz(); const { id, k, n } = el.dataset; M.setEntry(id, k, Math.max(0, (Number(M.entry(id, k)) || 0) + Number(n))); },
   'trk-number': (el) => S.numberForm(el.dataset.id, el.dataset.k),
   'trk-sleep': (el) => S.sleepForm(el.dataset.id, el.dataset.k),
   'trk-slip': (el) => S.slipConfirm(el.dataset.id, el.dataset.k),
@@ -131,7 +137,7 @@ const A = {
   'goal-del': (el) => { db.remove(el.dataset.id); closeSheet(); },
   'exp-del': (el) => db.remove(el.dataset.id),
 
-  sugg: (el) => { const yes = el.dataset.yes === '1'; M.decide(el.dataset.id, yes); toast(yes ? 'اتنفّذ' : 'اتشال'); },
+  sugg: (el) => { buzz(); const yes = el.dataset.yes === '1'; M.decide(el.dataset.id, yes); toast(yes ? 'اتنفّذ' : 'اتشال'); },
   'copy-claude': () => S.copyClaudeMenu(),
   'copy-claude-go': async (el) => { const ok = await copyText(claudePrompt(el.dataset.type)); closeSheet(); toast(ok ? 'اتنسخ. الصقه في شات Claude' : 'مقدرتش أنسخ'); },
   'paste-claude': () => S.pasteClaude(),
@@ -177,7 +183,7 @@ const F = {
     toast('اتحفظ. Claude هيقراه في المراجعة');
   },
   'sync-cfg'(f, fd) {
-    let url = (fd.get('url') || '').trim();
+    let url = (fd.get('url') || SUPABASE_URL).trim();
     if (!/^https?:\/\//.test(url)) url = `https://${url}`;
     sync.setConfig({ url, key: fd.get('key') || '' });
     document.activeElement?.blur();
@@ -255,6 +261,7 @@ async function boot() {
   drainNative();
   screenTime();
   chrome();
+  enableSheetSwipe();
   route();
   window.addEventListener('hashchange', route);
   db.onChange(() => { render(); pushNative(); });

@@ -6,9 +6,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'app', 'icons');
-const BG = [0xF7, 0xF5, 0xF2];
+const BG = [0x1C, 0x1B, 0x1A];
 const RED = [0xF2, 0x4A, 0x3D];
-const BLACK = [0x11, 0x11, 0x11];
+const BLACK = [0xF7, 0xF5, 0xF2]; // the two lower diamonds (warm white on dark)
 
 const CRC = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 const crc32 = (buf) => { let c = 0xFFFFFFFF; for (const b of buf) c = CRC[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };

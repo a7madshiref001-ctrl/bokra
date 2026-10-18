@@ -11,13 +11,13 @@ const nowHm = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d
 
 // ---------- add menu ----------
 export function addMenu() {
-  const card = (act, ic, title, sub) => `<button class="addcard" data-act="${act}">${icon(ic, 22)}<b>${title}</b><span>${sub}</span></button>`;
-  openSheet('ضيف حاجة', `<div class="addgrid">
-    ${card('add-task', 'list', 'مهمة', 'حاجة هتعملها مرة، بميعاد أو من غير')}
-    ${card('add-tracker', 'refresh', 'حاجة بتتكرر', 'عادة أو رقم تتابعه كل يوم أو كل أسبوع')}
-    ${card('add-expense', 'wallet', 'فلوس', 'مصروف أو فلوس دخلت')}
-    ${card('add-inbox', 'inbox', 'فكرة', 'اكتبها في دماغي ورتّبها بعدين')}
-    <button class="addcard wide" data-act="add-goal">${icon('target', 22)}<div><b>هدف</b><br><span>هدف كبير مربوط بحاجة بتتابعها</span></div></button>
+  const card = (act, ic, title, sub, acc = false) => `<button class="addcard" data-act="${act}"><span class="ai ${acc ? 'acc' : ''}">${icon(ic, 20)}</span><b class="en">${title}</b><span>${sub}</span></button>`;
+  openSheet('Add', `<div class="addgrid">
+    ${card('add-task', 'list', 'Task', 'حاجة هتعملها مرة، بميعاد أو من غير', true)}
+    ${card('add-tracker', 'refresh', 'Habit', 'عادة أو رقم تتابعه كل يوم أو كل أسبوع')}
+    ${card('add-expense', 'wallet', 'Money', 'مصروف أو فلوس دخلت')}
+    ${card('add-inbox', 'inbox', 'Idea', 'اكتبها في دماغي ورتّبها بعدين')}
+    <button class="addcard wide" data-act="add-goal"><span class="ai">${icon('target', 20)}</span><div><b class="en">Goal</b><br><span>هدف كبير مربوط بحاجة بتتابعها</span></div></button>
   </div>`);
 }
 
@@ -27,7 +27,7 @@ export function taskForm(id, preset = {}) {
   const k = M.today();
   const d = t ? t.data : { title: preset.title || '', date: preset.date === undefined ? k : preset.date, time: '', area: '', notes: '', top3: null };
   const mode = !d.date ? 'none' : d.date === k ? 'today' : d.date === shiftKey(k, 1) ? 'tomorrow' : 'pick';
-  openSheet(t ? 'عدّل المهمة' : 'مهمة جديدة', `<form data-form="task" data-id="${id || ''}" data-inbox="${preset.inbox || ''}">
+  openSheet(t ? 'Edit task' : 'New task', `<form data-form="task" data-id="${id || ''}" data-inbox="${preset.inbox || ''}">
     <div class="field"><label class="lbl" for="f-title">المهمة</label><input id="f-title" class="in" name="title" value="${esc(d.title)}" required autofocus autocomplete="off"></div>
     <div class="field"><span class="lbl">امتى؟</span>${chips('when', [{ value: 'today', label: 'النهارده' }, { value: 'tomorrow', label: 'بكرة' }, { value: 'pick', label: 'يوم تاني' }, { value: 'none', label: 'من غير ميعاد' }], mode)}
       <input class="in ltr" type="date" name="date" value="${d.date || ''}" style="margin-top:8px" data-pick ${mode === 'pick' ? '' : 'hidden'} aria-label="التاريخ"></div>
@@ -66,7 +66,7 @@ export function trackerForm(id) {
   const t = id ? db.get(id) : null;
   const d = t ? t.data : { name: '', type: 'check', unit: '', target: '', period: 'day', days: [], icon: 'diamond', private: false, remind: '', note: '' };
   const typeOpts = Object.entries(M.TYPES).map(([v, o]) => ({ value: v, label: `${o.label}<small>${o.sub}</small>` }));
-  openSheet(t ? esc(d.name) : 'حاجة جديدة تتابعها', `${t && !(d.private && d.type === 'streak') ? historyStrip(t) : ''}
+  openSheet(t ? esc(d.name) : 'New habit', `${t && !(d.private && d.type === 'streak') ? historyStrip(t) : ''}
   <form data-form="tracker" data-id="${id || ''}">
     <div class="field"><label class="lbl" for="t-name">اسمها</label><input id="t-name" class="in" name="name" value="${esc(d.name)}" required placeholder="مثلًا: أشرب مية" autofocus autocomplete="off"></div>
     <div class="field"><span class="lbl">نوعها</span><div class="types">${chips('type', typeOpts, d.type).replace('<div class="chips">', '').replace(/<\/div>$/, '')}</div></div>
@@ -83,7 +83,7 @@ export function trackerForm(id) {
     <label class="toggle" style="margin-top:16px"><span>خاصة<small>متظهرش في الإشعارات ولا الويدجت، والرقم بيبقى متغطّي</small></span><input type="checkbox" name="private" ${d.private ? 'checked' : ''}></label>
     <div class="actions"><button class="btn btn-primary">${t ? 'احفظ' : 'ضيفها'}</button>
       ${t ? `<button type="button" class="btn" data-act="trk-archive" data-id="${id}">شيلها</button>` : ''}</div>
-  </form>`);
+  </form>`, { ar: !!t });
   syncTrackerForm(document.querySelector('form[data-form="tracker"]'), true);
 }
 
@@ -114,7 +114,7 @@ export function expenseForm(tid) {
   let money = M.trackers().filter((t) => t.data.type === 'money');
   if (!money.length) { M.addTracker({ id: 't_money', name: 'المصاريف', icon: 'wallet', type: 'money', unit: 'ج', target: 0, period: 'day' }); money = M.trackers().filter((t) => t.data.type === 'money'); }
   tid = tid && db.get(tid) ? tid : money[0].id;
-  openSheet('سجّل فلوس', `<form data-form="expense">
+  openSheet('Money', `<form data-form="expense">
     <div class="field"><label class="lbl" for="x-amt">المبلغ</label><input id="x-amt" class="in ltr" name="amount" inputmode="decimal" required autofocus placeholder="0" autocomplete="off"></div>
     ${money.length > 1 ? `<div class="field"><span class="lbl">في</span>${chips('tracker', money.map((t) => ({ value: t.id, label: esc(t.data.name) })), tid)}</div>` : `<input type="hidden" name="tracker" value="${tid}">`}
     <div class="field"><span class="lbl">في إيه؟</span>${chips('category', CATS, '')}</div>
@@ -129,7 +129,7 @@ export function goalForm(id) {
   const g = id ? db.get(id) : null;
   const d = g ? g.data : { title: '', tracker: '', target: '', why: '' };
   const opts = [{ value: 'prayer', label: 'الصلاة' }, ...M.trackers().filter((t) => t.data.type !== 'money').map((t) => ({ value: t.id, label: esc(t.data.name) }))];
-  openSheet(g ? 'عدّل الهدف' : 'هدف جديد', `<form data-form="goal" data-id="${id || ''}">
+  openSheet(g ? 'Edit goal' : 'New goal', `<form data-form="goal" data-id="${id || ''}">
     <div class="field"><label class="lbl" for="g-title">الهدف</label><input id="g-title" class="in" name="title" value="${esc(d.title)}" required autofocus placeholder="مثلًا: أختم القرآن في شهرين" autocomplete="off"></div>
     <div class="field"><span class="lbl">بيتقاس بإيه؟</span>${chips('tracker', opts, d.tracker)}
       <p class="hint">مش لاقي اللي يقيسه؟ ضيف «حاجة بتتكرر» الأول.</p></div>
@@ -144,7 +144,7 @@ export function goalForm(id) {
 // ---------- quick entries ----------
 export function sleepForm(tid, k) {
   const e = M.entry(tid, k) || {};
-  openSheet('نومة امبارح', `<form data-form="sleep" data-id="${tid}" data-k="${k}">
+  openSheet('Sleep', `<form data-form="sleep" data-id="${tid}" data-k="${k}">
     <div class="row field">
       <div><label class="lbl" for="sl-a">نمت الساعة</label><input id="sl-a" class="in ltr" type="time" name="slept" value="${e.slept || '05:00'}" required></div>
       <div><label class="lbl" for="sl-b">صحيت الساعة</label><input id="sl-b" class="in ltr" type="time" name="woke" value="${e.woke || nowHm()}" required></div>
@@ -162,13 +162,13 @@ export function numberForm(tid, k) {
   openSheet(esc(d.name), `<form data-form="number" data-id="${tid}" data-k="${k}">
     <div class="field"><label class="lbl" for="n-v">${q}</label><input id="n-v" class="in ltr" name="value" inputmode="decimal" value="${v ?? ''}" autofocus autocomplete="off"></div>
     <div class="actions"><button class="btn btn-primary">احفظ</button></div>
-  </form>`);
+  </form>`, { ar: true });
 }
 
 export function slipConfirm(tid, k) {
   openSheet('وقعت؟', `<p>العداد هيرجع صفر، ومش هيتسجل غير التاريخ.</p>
     <p class="hint">Claude هيدوّر على النمط (أنهي يوم، أنهي ساعة)، مش على اللوم.</p>
-    <div class="actions"><button class="btn btn-primary" data-act="slip-yes" data-id="${tid}" data-k="${k}">سجّل</button><button class="btn" data-act="sheet-close">لأ</button></div>`);
+    <div class="actions"><button class="btn btn-primary" data-act="slip-yes" data-id="${tid}" data-k="${k}">سجّل</button><button class="btn" data-act="sheet-close">لأ</button></div>`, { ar: true });
 }
 
 // ---------- shifts ----------
@@ -185,13 +185,13 @@ export function shiftForm(k) {
       <div><label class="lbl" for="sh-b">لحد</label><input id="sh-b" class="in ltr" type="time" name="end" value="${sh.end || prev.end || '01:00'}"></div>
     </div>
     <div class="actions"><button class="btn btn-primary">احفظ</button></div>
-  </form>`);
+  </form>`, { ar: true });
 }
 
 // ---------- top 3 ----------
 export function top3Picker(k) {
   const cands = M.tasks().filter((t) => t.data.top3 === k || (!t.data.done && (!t.data.date || t.data.date <= k))).sort(M.byTask);
-  openSheet('أهم 3', `<p class="hint" style="margin-top:0">اختار لحد 3. هيظهروا في الويدجت.</p>
+  openSheet('Top 3', `<p class="hint" style="margin-top:0">اختار لحد 3. هيظهروا في الويدجت.</p>
     ${cands.length ? `<ul class="tl">${cands.map((t) => `<li class="task">
       <button type="button" class="cb ${t.data.top3 === k ? 'on' : ''}" data-act="top3-pick" data-id="${t.id}" data-k="${k}" aria-label="اختار">${icon('check', 16)}</button>
       <div class="t-main" data-act="top3-pick" data-id="${t.id}" data-k="${k}"><div class="t-title">${esc(t.data.title)}</div></div></li>`).join('')}</ul>` : ''}
@@ -201,21 +201,21 @@ export function top3Picker(k) {
 
 // ---------- Claude manual ----------
 export function copyClaudeMenu() {
-  openSheet('انسخ بياناتي لـ Claude', `<p class="hint" style="margin-top:0">اختار نوع المراجعة. هتتنسخ البيانات مع التعليمات، الصقها في شات Claude.</p>
+  openSheet('Copy for Claude', `<p class="hint" style="margin-top:0">اختار نوع المراجعة. هتتنسخ البيانات مع التعليمات، الصقها في شات Claude.</p>
     <div class="addgrid">
-      <button class="addcard" data-act="copy-claude-go" data-type="morning">${icon('sun', 22)}<b>خطة اليوم</b><span>أول ما تصحى</span></button>
-      <button class="addcard" data-act="copy-claude-go" data-type="night">${icon('moon', 22)}<b>مراجعة الليلة</b><span>بعد الشيفت</span></button>
-      <button class="addcard wide" data-act="copy-claude-go" data-type="weekly">${icon('calendar', 22)}<div><b>مراجعة الأسبوع</b><br><span>كل جمعة، ومعاها جدول الأسبوع الجاي</span></div></button>
+      <button class="addcard" data-act="copy-claude-go" data-type="morning"><span class="ai">${icon('sun', 20)}</span><b class="en">Morning plan</b><span>أول ما تصحى</span></button>
+      <button class="addcard" data-act="copy-claude-go" data-type="night"><span class="ai">${icon('moon', 20)}</span><b class="en">Night review</b><span>بعد الشيفت</span></button>
+      <button class="addcard wide" data-act="copy-claude-go" data-type="weekly"><span class="ai">${icon('calendar', 20)}</span><div><b class="en">Weekly review</b><br><span>كل جمعة، ومعاها جدول الأسبوع الجاي</span></div></button>
     </div>`);
 }
 export function pasteClaude() {
-  openSheet('الصق رد Claude', `<form data-form="claude-reply">
+  openSheet("Paste Claude's reply", `<form data-form="claude-reply">
     <textarea class="in ltr" name="text" style="min-height:220px" placeholder='{"items":[…]}' required></textarea>
     <p class="err" data-err hidden></p>
     <div class="actions"><button class="btn btn-primary">استورد</button></div></form>`);
 }
 export function backupIn() {
-  openSheet('استورد نسخة', `<form data-form="backup">
+  openSheet('Import', `<form data-form="backup">
     <input class="in" type="file" name="file" accept=".json,application/json" style="padding-top:10px">
     <p class="hint">أو الصق محتوى الملف:</p>
     <textarea class="in ltr" name="text" style="min-height:140px"></textarea>

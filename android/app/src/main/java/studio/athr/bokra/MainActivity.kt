@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
             .build()
 
         web = WebView(this)
-        web.setBackgroundColor(0xFFF7F5F2.toInt())
+        web.setBackgroundColor(0xFF1C1B1A.toInt())
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
