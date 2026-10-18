@@ -5,6 +5,7 @@ import { openSheet, closeSheet, buzz } from './ui.js';
 import { icon } from './icons.js';
 import { isNative, call } from './native.js';
 import { toast } from './util.js';
+import { DEMO } from './config.js';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const canListen = () => isNative || !!SR;
@@ -102,7 +103,7 @@ export function save() {
   M.addInbox(t, 'voice');
   buzz(18);
   closeSheet();
-  toast('اتحفظ. Claude هيحطه في مكانه أول ما يتوصل');
+  toast(DEMO ? 'اتحفظ. في النسخة الحقيقية Claude بيحطه في مكانه' : 'اتحفظ. Claude هيحطه في مكانه أول ما يتوصل');
 }
 
 // Android: text coming back from Google voice typing

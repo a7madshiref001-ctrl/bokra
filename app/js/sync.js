@@ -2,6 +2,7 @@
 import * as db from './db.js';
 import { isNative, call, callJSON } from './native.js';
 import { debounce } from './util.js';
+import { DEMO } from './config.js';
 
 const K_CFG = 'bokra.sync.cfg';
 const K_SES = 'bokra.sync.session';
@@ -30,7 +31,7 @@ function saveSession(s) {
   else if (s) localStorage.setItem(K_SES, JSON.stringify(s));
   else localStorage.removeItem(K_SES);
 }
-export const isReady = () => !!(config() && session());
+export const isReady = () => !DEMO && !!(config() && session());
 
 function toSession(j) {
   return {
@@ -55,6 +56,7 @@ async function authCall(path, body) {
 }
 
 export async function signIn(email, password) {
+  if (DEMO) throw new Error('دي نسخة تجريبية');
   const j = await authCall('token?grant_type=password', { email, password });
   saveSession(toSession(j));
   localStorage.removeItem(K_LAST);
@@ -63,6 +65,7 @@ export async function signIn(email, password) {
 }
 
 export async function signUp(email, password) {
+  if (DEMO) throw new Error('دي نسخة تجريبية');
   const j = await authCall('signup', { email, password });
   if (j.access_token) { saveSession(toSession(j)); db.markAllDirty(); await syncNow(); return 'in'; }
   return 'confirm'; // email confirmation is on
@@ -160,6 +163,7 @@ export async function syncNow() {
 }
 
 export function start() {
+  if (DEMO) { set('off'); return; }
   const soon = debounce(syncNow, 1500);
   db.onLocalChange(soon);
   window.addEventListener('online', syncNow);

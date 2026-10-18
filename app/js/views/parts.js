@@ -3,6 +3,7 @@ import { bar } from '../ui.js';
 import { icon } from '../icons.js';
 import { esc, fmtHm, fmtMinutes, fmtMoney, relDay, pad } from '../util.js';
 import { isNative } from '../native.js';
+import { DEMO } from '../config.js';
 
 // ---------- task row ----------
 export function taskRow(t, k) {
@@ -25,7 +26,7 @@ export function taskRow(t, k) {
 }
 
 // ---------- timers (per device) ----------
-const TK = 'bokra.timers';
+const TK = DEMO ? 'bokra-demo.timers' : 'bokra.timers';
 export function timers() { try { return JSON.parse(localStorage.getItem(TK) || '{}'); } catch (e) { return {}; } }
 export const timerFor = (id) => timers()[id] || null;
 export function startTimer(id, k) { const t = timers(); t[id] = { start: Date.now(), k }; localStorage.setItem(TK, JSON.stringify(t)); }

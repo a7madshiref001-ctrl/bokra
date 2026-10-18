@@ -1,8 +1,10 @@
 // Local-first store: everything lives in memory + IndexedDB, and sync.js mirrors it to Supabase.
 // An item = { id, kind, data, updated_at, deleted, dirty }
 import { nowISO } from './util.js';
+import { DEMO } from './config.js';
 
-const DB_NAME = 'bokra';
+const DB_NAME = DEMO ? 'bokra-demo' : 'bokra';
+const LS_KEY = DEMO ? 'bokra-demo.items' : 'bokra.items';
 const STORE = 'items';
 let idb = null;
 const mem = new Map();
@@ -31,7 +33,7 @@ function openIDB() {
 export async function init() {
   idb = await openIDB();
   if (!idb) {
-    try { (JSON.parse(localStorage.getItem('bokra.items') || '[]')).forEach((i) => mem.set(i.id, i)); } catch (e) { /* empty */ }
+    try { (JSON.parse(localStorage.getItem(LS_KEY) || '[]')).forEach((i) => mem.set(i.id, i)); } catch (e) { /* empty */ }
     return;
   }
   await new Promise((resolve) => {
@@ -42,9 +44,9 @@ export async function init() {
   });
   // anything saved while IndexedDB was unavailable comes back in (newer wins)
   try {
-    const saved = JSON.parse(localStorage.getItem('bokra.items') || '[]');
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
     saved.forEach((i) => { const cur = mem.get(i.id); if (!cur || (i.updated_at || '') > (cur.updated_at || '')) { mem.set(i.id, i); persist(i); } });
-    localStorage.removeItem('bokra.items');
+    localStorage.removeItem(LS_KEY);
   } catch (e) { /* nothing saved */ }
 }
 
@@ -56,7 +58,7 @@ function flush() {
   const batch = queue; queue = []; flushing = false;
   if (!batch.length) return;
   if (!idb) {
-    try { localStorage.setItem('bokra.items', JSON.stringify([...mem.values()])); } catch (e) { /* quota */ }
+    try { localStorage.setItem(LS_KEY, JSON.stringify([...mem.values()])); } catch (e) { /* quota */ }
     return;
   }
   const tx = idb.transaction(STORE, 'readwrite');

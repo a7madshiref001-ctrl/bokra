@@ -3,6 +3,7 @@ import * as M from './model.js';
 import * as db from './db.js';
 import { openSheet, closeSheet, chips } from './ui.js';
 import { icon, ICON_NAMES } from './icons.js';
+import { DEMO } from './config.js';
 import { esc, shiftKey, parseKey, fmtDayMonth, DAY_NAMES, WEEK_ORDER, pad, toast } from './util.js';
 
 const AREAS = ['عام', 'أثر', 'العيادات', 'الشغل', 'البيت', 'دين'];
@@ -65,7 +66,7 @@ function historyStrip(t) {
 export function trackerForm(id) {
   const t = id ? db.get(id) : null;
   const d = t ? t.data : { name: '', type: 'check', unit: '', target: '', period: 'day', days: [], icon: 'diamond', private: false, remind: '', note: '' };
-  const typeOpts = Object.entries(M.TYPES).map(([v, o]) => ({ value: v, label: `${o.label}<small>${o.sub}</small>` }));
+  const typeOpts = Object.entries(M.TYPES).filter(([v]) => !(DEMO && v === 'streak')).map(([v, o]) => ({ value: v, label: `${o.label}<small>${o.sub}</small>` }));
   openSheet(t ? esc(d.name) : 'New habit', `${t && !(d.private && d.type === 'streak') ? historyStrip(t) : ''}
   <form data-form="tracker" data-id="${id || ''}">
     <div class="field"><label class="lbl" for="t-name">اسمها</label><input id="t-name" class="in" name="name" value="${esc(d.name)}" required placeholder="مثلًا: أشرب مية" autofocus autocomplete="off"></div>

@@ -2,14 +2,16 @@ import { icon, dm3 } from './icons.js';
 import { esc } from './util.js';
 import * as sync from './sync.js';
 import { illus } from './illus.js';
+import { DEMO } from './config.js';
 
 const SYNC_LABEL = { ok: 'متزامن', syncing: 'بيزامن', error: 'المزامنة وقفت', offline: 'مفيش نت', off: 'المزامنة مش متوصلة' };
 
 function greeting() {
   const h = new Date().getHours();
-  if (h >= 5 && h < 15) return { ic: 'sun', t: 'صباح الخير يا أحمد' };
-  if (h >= 15 && h < 19) return { ic: 'sun', t: 'مساء الخير يا أحمد' };
-  return { ic: 'moon', t: 'مساء الخير يا أحمد' };
+  const who = DEMO ? '' : ' يا أحمد';
+  if (h >= 5 && h < 15) return { ic: 'sun', t: `صباح الخير${who}` };
+  if (h >= 15 && h < 19) return { ic: 'sun', t: `مساء الخير${who}` };
+  return { ic: 'moon', t: `مساء الخير${who}` };
 }
 
 // title: English unless opts.ar. sub: Arabic line under the Anchor Line.
@@ -18,7 +20,7 @@ export function header(title, sub = '', right = '', opts = {}) {
   const g = opts.greet ? greeting() : null;
   return `<header class="vh">
     <div class="vh-row">
-      <a class="mark" href="#today">بكرة ${dm3()}</a>
+      <a class="mark" href="#today">بكرة ${dm3()}${DEMO ? '<span class="demo-pill">Demo</span>' : ''}</a>
       <div class="vh-tools">
         <a href="#settings" class="sync s-${st}" title="${SYNC_LABEL[st] || ''}" aria-label="${SYNC_LABEL[st] || ''}"><i></i></a>
         <a class="ibtn" href="#settings" aria-label="Settings">${icon('sliders', 19)}</a>

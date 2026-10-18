@@ -6,7 +6,8 @@ import { icon } from './icons.js';
 import { $, $$, toast, debounce, copyText, dlFile, shiftKey } from './util.js';
 import { closeSheet, sheetOpen, morph, enableSheetSwipe, buzz } from './ui.js';
 import { CITIES } from './prayer.js';
-import { SUPABASE_URL } from './config.js';
+import { SUPABASE_URL, DEMO } from './config.js';
+import { seedDemo } from './demo.js';
 import * as S from './sheets.js';
 import * as V from './voice.js';
 import { startTimer, stopTimer, timers, elapsed } from './views/parts.js';
@@ -180,6 +181,11 @@ const A = {
     if (isNative) call('share', { title: 'BOKRA backup', text }); else dlFile(`bokra-${M.today()}.json`, text);
   },
   'backup-in': () => S.backupIn(),
+  'demo-reset': async () => {
+    localStorage.removeItem('bokra-demo.items'); localStorage.removeItem('bokra-demo.timers');
+    await new Promise((r) => { const q = indexedDB.deleteDatabase('bokra-demo'); q.onsuccess = q.onerror = q.onblocked = () => r(); setTimeout(r, 1500); });
+    location.reload();
+  },
 };
 
 const F = {
@@ -285,7 +291,7 @@ document.addEventListener('input', (e) => {
 // ---------- boot ----------
 async function boot() {
   await db.init();
-  M.seed();
+  if (DEMO) seedDemo(); else M.seed();
   drainNative();
   screenTime();
   chrome();
@@ -306,7 +312,7 @@ async function boot() {
   setInterval(() => { if (!sheetOpen()) render(); pushNative(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { drainNative(); render(); } });
   setTimeout(() => $('#splash')?.classList.add('gone'), 250);
-  if (!isNative && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  if (!isNative && !DEMO && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 }

@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { esc, fmtClock } from '../util.js';
 import { CITIES } from '../prayer.js';
 import { isNative, callJSON } from '../native.js';
-import { SUPABASE_URL, SUPABASE_KEYS_PAGE } from '../config.js';
+import { SUPABASE_URL, SUPABASE_KEYS_PAGE, DEMO } from '../config.js';
 
 export const LEVELS = {
   1: 'وقت الصلاة بس، وتقدر تمسحه',
@@ -26,6 +26,12 @@ export function render() {
 }
 
 function syncCard() {
+  if (DEMO) {
+    return `<div class="card" data-key="demo">${ch('Demo', 'sparkles')}
+      <p>دي نسخة تجريبية من BOKRA، والداتا اللي فيها مثال.</p>
+      <p class="hint">كل اللي بتعمله بيتحفظ على جهازك بس، ومش متوصل بأي حساب ولا سيرفر. في النسخة الحقيقية، الموبايل والكمبيوتر بيتزامنوا، وClaude بيراجع يومك ويحط اللي بتقوله بصوتك في مكانه.</p>
+      <div class="actions"><button class="btn" data-act="demo-reset">${icon('refresh', 18)} رجّع الداتا التجريبية</button></div></div>`;
+  }
   const cfg = sync.config();
   const ses = sync.session();
   const st = sync.state;

@@ -460,3 +460,5 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .task:hover .t-title { color: var(--text); }
   .star:hover { color: var(--text2); }
 }
+
+.demo-pill { font-family: var(--en); font-size: 12px; font-weight: 500; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 9px; margin-inline-start: 4px; letter-spacing: .04em; }
