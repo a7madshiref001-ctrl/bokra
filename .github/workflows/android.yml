@@ -1,0 +1,59 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', 'android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Signing key
+        env:
+          KS: ${{ secrets.BOKRA_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/bokra.p12"
+            echo "BOKRA_KEYSTORE=$RUNNER_TEMP/bokra.p12" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No BOKRA_KEYSTORE_B64 secret, building with a throwaway debug key"
+          fi
+
+      - name: Build
+        env:
+          BOKRA_KEYSTORE_PASSWORD: ${{ secrets.BOKRA_KEYSTORE_PASSWORD }}
+          BOKRA_VERSION_CODE: ${{ github.run_number }}
+          BOKRA_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: gradle -p android assembleRelease --no-daemon --stacktrace
+
+      - name: Rename
+        run: cp android/app/build/outputs/apk/release/app-release.apk BOKRA.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BOKRA-apk
+          path: BOKRA.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: BOKRA 1.0.${{ github.run_number }}
+          body: نزّل BOKRA.apk على الموبايل وثبّته فوق النسخة القديمة.
+          files: BOKRA.apk
+          make_latest: true

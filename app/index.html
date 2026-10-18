@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F5F2">
+<meta name="description" content="BOKRA — سيستم يومك: الصلاة، المهام، العادات، والأهداف، وClaude بيراجع معاك.">
+<title>BOKRA</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;700;800;900&family=Readex+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="splash" aria-hidden="true"><b>بكرة</b><span class="dm3 big load"><i></i><i></i><i></i></span><small>BOKRA · by .ATHR</small></div>
+
+<div class="shell">
+  <aside class="side">
+    <a class="side-mark" href="#today"><b>بكرة</b><span class="dm3 big"><i></i><i></i><i></i></span></a>
+    <nav class="side-nav" aria-label="الأقسام">
+      <a href="#today" data-nav="today"><span data-icon="sun" data-size="20"></span>النهارده</a>
+      <a href="#tasks" data-nav="tasks"><span data-icon="list" data-size="20"></span>المهام</a>
+      <a href="#week" data-nav="week"><span data-icon="calendar" data-size="20"></span>الأسبوع</a>
+      <a href="#review" data-nav="review"><span data-icon="sparkles" data-size="20"></span>المراجعة</a>
+      <a href="#settings" data-nav="settings"><span data-icon="sliders" data-size="20"></span>الإعدادات</a>
+    </nav>
+    <button class="btn btn-primary side-add" data-act="add"><span data-icon="plus" data-size="18"></span>ضيف حاجة</button>
+    <p class="side-foot">BOKRA · by .ATHR</p>
+  </aside>
+  <main id="view" class="main" aria-live="polite"></main>
+</div>
+
+<form class="capture" data-form="capture" autocomplete="off">
+  <input name="text" placeholder="دماغي: اكتب أي حاجة في دماغك…" aria-label="دماغي" enterkeyhint="send">
+  <button aria-label="احفظ"><span data-icon="arrow" data-size="18"></span></button>
+</form>
+
+<nav class="tabbar" aria-label="الأقسام">
+  <a href="#today" data-nav="today"><span data-icon="sun"></span>النهارده</a>
+  <a href="#tasks" data-nav="tasks"><span data-icon="list"></span>المهام</a>
+  <button class="tab-add" data-act="add" aria-label="ضيف حاجة"><span data-icon="plus" data-size="26"></span></button>
+  <a href="#week" data-nav="week"><span data-icon="calendar"></span>الأسبوع</a>
+  <a href="#review" data-nav="review"><span data-icon="sparkles"></span>المراجعة</a>
+</nav>
+
+<div id="sheet"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

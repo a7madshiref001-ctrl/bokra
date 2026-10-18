@@ -1,0 +1,19 @@
+# secrets never go to GitHub
+.env
+*.p12
+*.jks
+*.keystore
+.bokra-session.json
+
+# build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+
+# local
+design/
+__pycache__/
+.DS_Store
+Thumbs.db

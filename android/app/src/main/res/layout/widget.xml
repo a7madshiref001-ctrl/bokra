@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:layoutDirection="rtl"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:id="@+id/w_head"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/w_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="الصلاة الجاية"
+                android:textColor="#767676"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/w_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="العصر"
+                android:textColor="#111111"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/w_sub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text=""
+                android:textColor="#F24A3D"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/w_pray"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:background="@drawable/btn_dark"
+            android:gravity="center"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="صليت"
+            android:textColor="#F7F5F2"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <LinearLayout style="@style/WDot">
+            <ImageView android:id="@+id/w_d0" style="@style/WDotBar" android:contentDescription="الفجر" />
+            <TextView style="@style/WDotText" android:text="فجر" />
+        </LinearLayout>
+        <LinearLayout style="@style/WDot">
+            <ImageView android:id="@+id/w_d1" style="@style/WDotBar" android:contentDescription="الضهر" />
+            <TextView style="@style/WDotText" android:text="ضهر" />
+        </LinearLayout>
+        <LinearLayout style="@style/WDot">
+            <ImageView android:id="@+id/w_d2" style="@style/WDotBar" android:contentDescription="العصر" />
+            <TextView style="@style/WDotText" android:text="عصر" />
+        </LinearLayout>
+        <LinearLayout style="@style/WDot">
+            <ImageView android:id="@+id/w_d3" style="@style/WDotBar" android:contentDescription="المغرب" />
+            <TextView style="@style/WDotText" android:text="مغرب" />
+        </LinearLayout>
+        <LinearLayout style="@style/WDot">
+            <ImageView android:id="@+id/w_d4" style="@style/WDotBar" android:contentDescription="العشا" />
+            <TextView style="@style/WDotText" android:text="عشا" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/line" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:text="أهم 3 النهارده"
+        android:textColor="#767676"
+        android:textSize="12sp" />
+
+    <LinearLayout android:id="@+id/w_r0" style="@style/WRow">
+        <ImageView android:id="@+id/w_c0" style="@style/WCb" />
+        <TextView android:id="@+id/w_t0" style="@style/WTask" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_r1" style="@style/WRow">
+        <ImageView android:id="@+id/w_c1" style="@style/WCb" />
+        <TextView android:id="@+id/w_t1" style="@style/WTask" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/w_r2" style="@style/WRow">
+        <ImageView android:id="@+id/w_c2" style="@style/WCb" />
+        <TextView android:id="@+id/w_t2" style="@style/WTask" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/w_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="start"
+        android:text="اختار أهم 3 من التطبيق"
+        android:textColor="#4B4B4B"
+        android:textSize="14sp"
+        android:visibility="gone" />
+</LinearLayout>
