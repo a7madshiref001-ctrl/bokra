@@ -50,6 +50,22 @@ export function chips(name, options, value, multi = false) {
   }).join('')}</div>`;
 }
 
+// numbers count to their new value instead of jumping
+const NUM = /^\d{1,6}(\.\d{1,2})?$/;
+function countTo(node, from, toText) {
+  const to = Number(toText);
+  const dec = (toText.split('.')[1] || '').length;
+  const t0 = performance.now();
+  const dur = Math.min(700, 250 + Math.abs(to - from) * 40);
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = 1 - (1 - p) ** 3;
+    node.nodeValue = (from + (to - from) * e).toFixed(dec);
+    if (p < 1) requestAnimationFrame(step); else node.nodeValue = toText;
+  };
+  requestAnimationFrame(step);
+}
+
 // ---------- morph: update the DOM in place so nothing flickers and CSS transitions run ----------
 export function morph(target, html) {
   const tpl = document.createElement('template');
@@ -68,7 +84,9 @@ function patchChildren(a, b) {
     if (!same(na, nb)) { a.replaceChild(nb, na); return; }
     if (na.nodeType !== 1) {
       if (na.nodeValue !== nb.nodeValue) {
-        na.nodeValue = nb.nodeValue;
+        const from = na.nodeValue.trim(); const to = nb.nodeValue.trim();
+        if (NUM.test(from) && NUM.test(to)) countTo(na, Number(from), to);
+        else na.nodeValue = nb.nodeValue;
         const t = na.parentElement?.closest('[data-anim]');
         if (t) { t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); }
       }

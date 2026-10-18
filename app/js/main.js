@@ -35,14 +35,17 @@ function render(reset = false) {
   const html = VIEWS[current].render();
   if (reset) {
     el.innerHTML = html;
-    $$('.vh, .card, .tile, .sec, .sugg, .quick', el).forEach((n, i) => n.style.setProperty('--d', `${Math.min(i, 12) * 45}ms`));
+    // stagger: cards one after another; inside them, chips / blocks / squares / bars in order
+    $$('.card, .habit, .sec, .sugg, .quick', el).forEach((n, i) => n.style.setProperty('--d', `${Math.min(i, 12) * 60 + 120}ms`));
+    ['.pray-row .pchip', '.tl-block', '.hc', '.mb i'].forEach((sel) => $$(sel, el).forEach((n, i) => n.style.setProperty('--i', i)));
     el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
-    clearTimeout(render.t); render.t = setTimeout(() => el.classList.remove('enter'), 1300);
+    clearTimeout(render.t); render.t = setTimeout(() => el.classList.remove('enter'), 1800);
     window.scrollTo(0, 0);
   } else {
     morph(el, html);
   }
   $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === current));
+  moveTabIndicator();
   const pend = M.inbox().length;
   $$('[data-voice-badge]').forEach((b) => { b.hidden = !pend; b.textContent = pend; });
 }
@@ -78,6 +81,85 @@ window.bokraBack = () => {
   if (current !== 'today') { location.hash = '#today'; return true; }
   return false;
 };
+
+// ---------- motion helpers ----------
+// the soft pill behind the active tab slides to wherever you go
+function moveTabIndicator() {
+  const bar = $('.tabbar');
+  const ind = $('.tab-ind');
+  if (!bar || !ind) return;
+  const a = $('.tabbar a.on');
+  if (!a) { ind.classList.remove('on'); return; }
+  const b = bar.getBoundingClientRect();
+  const r = a.getBoundingClientRect();
+  ind.style.width = `${r.width - 6}px`;
+  ind.style.transform = `translateX(${r.left - b.left + 3}px)`;
+  ind.classList.add('on');
+}
+
+// a quiet ripple from where your finger touched
+const PRESS = '.btn, .hbtn, .ibtn, .pchip, .addcard, .tab-mic, .tabbar a, .tl-row, .chip > span';
+function enablePress() {
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest(PRESS);
+    if (!el || el.disabled) return;
+    const r = el.getBoundingClientRect();
+    const s = Math.max(r.width, r.height) * 2.2;
+    const rip = document.createElement('span');
+    rip.className = 'rip';
+    rip.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+    el.appendChild(rip);
+    setTimeout(() => rip.remove(), 650);
+  }, { passive: true });
+}
+
+// "+1" that floats up from the button
+function floatText(el, text) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const f = document.createElement('span');
+  f.className = 'floater';
+  f.textContent = text;
+  f.style.left = `${r.left + r.width / 2}px`;
+  f.style.top = `${r.top}px`;
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 850);
+}
+
+// pull down at the top of the page to sync now
+function enablePullToSync() {
+  const ptr = $('#ptr');
+  if (!ptr) return;
+  let y0 = null; let dy = 0;
+  document.addEventListener('touchstart', (e) => {
+    y0 = window.scrollY <= 0 && !sheetOpen() ? e.touches[0].clientY : null; dy = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (y0 == null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    if (!dy) return;
+    const p = Math.min(1, dy / 90);
+    ptr.classList.add('pull');
+    ptr.style.opacity = String(p);
+    ptr.style.transform = `translate(-50%, ${-60 + p * 84}px) rotate(${p * 180}deg)`;
+  }, { passive: true });
+  document.addEventListener('touchend', async () => {
+    if (y0 == null) return;
+    y0 = null;
+    ptr.classList.remove('pull');
+    if (dy > 90) {
+      ptr.classList.add('go');
+      ptr.style.transform = 'translate(-50%, 24px)';
+      buzz(14);
+      await sync.syncNow();
+      drainNative();
+      render();
+      setTimeout(() => { ptr.classList.remove('go'); ptr.style.opacity = '0'; ptr.style.transform = 'translate(-50%, -60px)'; }, 500);
+    } else {
+      ptr.style.opacity = '0'; ptr.style.transform = 'translate(-50%, -60px)';
+    }
+  });
+}
 
 // ---------- actions ----------
 const loginError = (m) => ({
@@ -116,6 +198,7 @@ const A = {
   'trk-inc': (el) => {
     buzz(); const { id, k, n } = el.dataset; const was = isComplete(db.get(id), k);
     M.setEntry(id, k, Math.max(0, (Number(M.entry(id, k)) || 0) + Number(n))); afterChange(id, k, was);
+    floatText(el, Number(n) > 0 ? `+${n}` : `${n}`);
   },
   'trk-number': (el) => S.numberForm(el.dataset.id, el.dataset.k),
   'trk-sleep': (el) => S.sleepForm(el.dataset.id, el.dataset.k),
@@ -127,7 +210,7 @@ const A = {
     if (r) {
       const was = isComplete(db.get(el.dataset.id), r.k);
       M.setEntry(el.dataset.id, r.k, (Number(M.entry(el.dataset.id, r.k)) || 0) + r.minutes);
-      toast(`اتسجّل ${r.minutes} دقيقة`);
+      floatText(el, `+${r.minutes} د`);
       afterChange(el.dataset.id, r.k, was);
     }
     render();
@@ -303,7 +386,11 @@ async function boot() {
   }, 1000);
   setInterval(() => { if (!sheetOpen()) render(); pushNative(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { drainNative(); render(); } });
-  setTimeout(() => $('#splash')?.classList.add('gone'), 250);
+  // let the intro finish (about 0.75s from page start), then fade it out
+  setTimeout(() => $('#splash')?.classList.add('gone'), Math.max(120, 750 - performance.now()));
+  enablePress();
+  enablePullToSync();
+  window.addEventListener('resize', moveTabIndicator);
   if (!isNative && !DEMO && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

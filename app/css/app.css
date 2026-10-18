@@ -14,7 +14,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: var(--bg); touch-action: manipulation; overflow-x: hidden; }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: var(--bg); touch-action: manipulation; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--ar); font-size: 16px; line-height: 1.55;
   -webkit-font-smoothing: antialiased; min-height: 100vh; padding-bottom: calc(104px + var(--safe-b));
@@ -602,7 +602,7 @@ details.more[open] > summary .ic:last-child { transform: rotate(180deg); }
 .sq-btn { width: 50px; height: 50px; padding: 0; border-radius: var(--r-sm); flex: 0 0 50px !important; }
 
 /* v1.5: tasks on the opening screen, folds for later */
-body { overflow-x: hidden; max-width: 100vw; }
+.shell { overflow-x: clip; } /* clip, not hidden: never turns the page into a stuck scroll box */
 .sub { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin: 14px 2px 2px; }
 .ini { width: 32px; height: 32px; border-radius: 10px; background: var(--raise); color: var(--muted); display: grid; place-items: center; flex-shrink: 0; }
 details.fold > summary { list-style: none; cursor: pointer; }
@@ -611,3 +611,97 @@ details.fold > summary .card-h { margin-bottom: 0; }
 details.fold[open] > summary .card-h { margin-bottom: 4px; }
 details.fold[open] > summary .ch-r .ic:last-child { transform: rotate(180deg); }
 .a-tasks .card:first-child { margin-top: 16px; }
+
+/* ================= motion v2: clear, quick, never loud (Athr: fade, slide, mask, tracking, diamonds) ================= */
+:root { --out: cubic-bezier(.16, 1, .3, 1); }
+
+/* page entrance: title tracks in, the Anchor Line draws, its diamonds appear, then cards rise one after another */
+.main.enter .vh-title .t { animation: trackin .8s var(--out) both; }
+@keyframes trackin { from { opacity: 0; letter-spacing: .28em; filter: blur(6px); } to { opacity: 1; letter-spacing: .01em; filter: none; } }
+.main.enter .vh-title .t.ar { animation-name: fadeup; }
+.main.enter .anchor > span:not(.dm3) { animation: linegrow .9s var(--out) .12s both; transform-origin: right center; }
+@keyframes linegrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.main.enter .anchor .dm3 i { animation: dmin .45s var(--out) both; }
+.main.enter .anchor .dm3 i:nth-child(1) { animation-delay: .5s; }
+.main.enter .anchor .dm3 i:nth-child(2) { animation-delay: .58s; }
+.main.enter .anchor .dm3 i:nth-child(3) { animation-delay: .66s; }
+@keyframes dmin { from { opacity: 0; transform: rotate(45deg) scale(0); } to { opacity: 1; transform: rotate(45deg) scale(1); } }
+.main.enter .vh-sub, .main.enter .greet { animation: fadeup .6s var(--out) .2s both; }
+.main.enter .card, .main.enter .habit, .main.enter .sec, .main.enter .sugg, .main.enter .quick, .main.enter .vh-row { animation: cardin .7s var(--out) both; animation-delay: var(--d, 0ms); }
+.main.enter .vh { animation: none; }
+@keyframes cardin { from { opacity: 0; transform: translateY(26px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes fadeup { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* prayer: the name is revealed from the right, chips arrive in order */
+.main.enter .pray-name { animation: maskin .9s var(--out) .15s both; }
+@keyframes maskin { from { clip-path: inset(0 0 0 100%); opacity: .2; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+.main.enter .pchip { animation: chipin .55s var(--out) both; animation-delay: calc(var(--i, 0) * 55ms + .25s); }
+@keyframes chipin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.main.enter .pray-cta { animation: fadeup .6s var(--out) .35s both; }
+
+/* bars and fills grow in on entrance */
+.main.enter .bar i { animation: fillin 1.1s var(--out) .3s both; }
+.main.enter .hfill { animation: fillin 1.3s var(--out) both; animation-delay: calc(var(--d, 0ms) + .15s); }
+@keyframes fillin { from { width: 0; } }
+
+/* week, drawn: blocks sweep in, squares fill like a wave, money bars rise */
+.main.enter .tl-block { animation: blockin .8s var(--out) both; animation-delay: calc(var(--i, 0) * 55ms + .2s); transform-origin: right center; }
+@keyframes blockin { from { opacity: 0; transform: scaleX(.2); } to { opacity: 1; transform: none; } }
+.main.enter .hc { animation: cellin .5s var(--out) both; animation-delay: calc(var(--i, 0) * 18ms + .2s); }
+@keyframes cellin { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+.main.enter .mb i { animation: barup .9s var(--out) both; animation-delay: calc(var(--i, 0) * 60ms + .2s); transform-origin: bottom center; }
+@keyframes barup { from { transform: scaleY(0); } to { transform: none; } }
+
+/* sliding tab indicator */
+.tabbar { position: fixed; }
+.tab-ind { position: absolute; top: 6px; height: 52px; border-radius: 16px; background: rgba(247, 245, 242, .07); transition: transform .55s var(--out), width .55s var(--out), opacity .3s; pointer-events: none; opacity: 0; }
+.tab-ind.on { opacity: 1; }
+.tabbar a { position: relative; z-index: 1; }
+.tabbar a::after { display: none; }
+.tabbar a.on .ic { animation: none; transform: translateY(-1px) scale(1.08); }
+.tabbar a .ic { transition: transform .45s var(--out), color .3s; }
+
+/* press ripple */
+.btn, .hbtn, .ibtn, .pchip, .addcard, .tab-mic, .tabbar a, .tl-row, .chip > span { position: relative; overflow: hidden; }
+.rip { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: rip .6s var(--out) forwards; }
+@keyframes rip { to { transform: scale(1); opacity: 0; } }
+
+/* +1 that floats up from the button you pressed */
+.floater { position: fixed; z-index: 70; pointer-events: none; font-family: var(--en); font-weight: 700; font-size: 15px; color: var(--text); transform: translate(-50%, -50%); animation: floatup .8s var(--out) forwards; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
+@keyframes floatup { from { opacity: 0; transform: translate(-50%, -30%); } 25% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -190%); } }
+
+/* a finished task: a line draws across it (right to left) */
+.task .t-title { background: linear-gradient(var(--muted), var(--muted)) no-repeat right center / 0% 1.5px; transition: background-size .45s var(--out), color .35s; }
+.task.done .t-title { text-decoration: none; background-size: 100% 1.5px; }
+.task { transition: opacity .35s; }
+
+/* sheets: smooth arrival, contents follow */
+.sheet { animation: sheetup .5s var(--out); }
+@keyframes sheetup { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet > h2, .sheet > .anchor, .sheet > form > *, .sheet > .addgrid > *, .sheet > .voice > *, .sheet > ul > li { animation: fadeup .5s var(--out) both; }
+.sheet > form > *:nth-child(2), .sheet > .addgrid > *:nth-child(2), .sheet > .voice > *:nth-child(2) { animation-delay: .04s; }
+.sheet > form > *:nth-child(3), .sheet > .addgrid > *:nth-child(3), .sheet > .voice > *:nth-child(3) { animation-delay: .08s; }
+.sheet > form > *:nth-child(4), .sheet > .addgrid > *:nth-child(4), .sheet > .voice > *:nth-child(4) { animation-delay: .12s; }
+.sheet > form > *:nth-child(n+5), .sheet > .addgrid > *:nth-child(n+5), .sheet > .voice > *:nth-child(n+5) { animation-delay: .16s; }
+@media (min-width: 900px) { .sheet { animation: pop .3s var(--out); } }
+
+/* intro: three diamonds come together into «ث», the word follows */
+#splash .dm3 i { animation: dmfly .7s var(--out) both; }
+#splash .dm3 i:nth-child(1) { animation-delay: .05s; --fx: 40px; --fy: -30px; }
+#splash .dm3 i:nth-child(2) { animation-delay: .12s; --fx: 0px; --fy: 40px; }
+#splash .dm3 i:nth-child(3) { animation-delay: .19s; --fx: -40px; --fy: -30px; }
+@keyframes dmfly { from { opacity: 0; transform: translate(var(--fx), var(--fy)) rotate(45deg) scale(.4); } to { opacity: 1; transform: rotate(45deg); } }
+#splash b { animation: maskin .7s var(--out) .2s both; }
+#splash small { animation: fadeup .6s var(--out) .35s both; }
+#splash.gone { transition: opacity .45s, transform .45s var(--out); transform: scale(1.04); }
+
+/* pull down at the top to sync */
+#ptr { position: fixed; top: 0; left: 50%; z-index: 40; transform: translate(-50%, -60px); width: 44px; height: 44px; border-radius: 50%; background: var(--raise); border: 1px solid var(--line2); display: grid; place-items: center; pointer-events: none; transition: transform .35s var(--out), opacity .3s; opacity: 0; }
+#ptr.pull { transition: none; }
+#ptr.go .dm3 i { animation: dmf 1s infinite ease-in-out; }
+#ptr.go .dm3 i:nth-child(2) { animation-delay: .15s; }
+#ptr.go .dm3 i:nth-child(3) { animation-delay: .3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .main.enter *, .sheet, .sheet *, #splash * { animation: none !important; }
+}
