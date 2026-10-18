@@ -40,20 +40,28 @@ jobs:
           BOKRA_KEYSTORE_PASSWORD: ${{ secrets.BOKRA_KEYSTORE_PASSWORD }}
           BOKRA_VERSION_CODE: ${{ github.run_number }}
           BOKRA_VERSION_NAME: 1.0.${{ github.run_number }}
-        run: gradle -p android assembleRelease --no-daemon --stacktrace
+        run: gradle -p android assembleFullRelease assembleDemoRelease --no-daemon --stacktrace
 
       - name: Rename
-        run: cp android/app/build/outputs/apk/release/app-release.apk BOKRA.apk
+        run: |
+          cp android/app/build/outputs/apk/full/release/app-full-release.apk BOKRA.apk
+          cp android/app/build/outputs/apk/demo/release/app-demo-release.apk BOKRA-Demo.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: BOKRA-apk
-          path: BOKRA.apk
+          path: |
+            BOKRA.apk
+            BOKRA-Demo.apk
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: BOKRA 1.0.${{ github.run_number }}
-          body: نزّل BOKRA.apk على الموبايل وثبّته فوق النسخة القديمة.
-          files: BOKRA.apk
+          body: |
+            BOKRA.apk = التطبيق الحقيقي، ثبّته فوق النسخة القديمة.
+            BOKRA-Demo.apk = نسخة تجريبية منفصلة بداتا مثال، لأي حد عايز يجرّب.
+          files: |
+            BOKRA.apk
+            BOKRA-Demo.apk
           make_latest: true

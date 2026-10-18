@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
         }
         web.addJavascriptInterface(Bridge(), "BokraNative")
         setContentView(web)
-        web.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
+        web.loadUrl("https://appassets.androidplatform.net/assets/www/" + BuildConfig.START_PAGE)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {

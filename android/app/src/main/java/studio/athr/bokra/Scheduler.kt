@@ -23,6 +23,8 @@ object Scheduler {
         val prefs = Store.prefs(c)
         (prefs.getStringSet("alarms", emptySet()) ?: emptySet()).forEach { cancel(c, am, it) }
         val codes = mutableSetOf<String>()
+        // the demo app never schedules real reminders (the "test notification" button still works)
+        if (BuildConfig.DEMO) { prefs.edit().putStringSet("alarms", codes).apply(); return }
         val s = Store.state(c)
         val now = System.currentTimeMillis()
         val lead = Store.lead(s).toLong() * 60000L

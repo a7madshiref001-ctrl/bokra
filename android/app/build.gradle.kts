@@ -30,6 +30,28 @@ android {
         }
     }
 
+    // full = the real app; demo = a separate app (own id and storage) that opens the sample-data demo
+    flavorDimensions += "mode"
+    productFlavors {
+        create("full") {
+            dimension = "mode"
+            resValue("string", "app_name", "BOKRA")
+            buildConfigField("String", "START_PAGE", "\"index.html\"")
+            buildConfigField("boolean", "DEMO", "false")
+        }
+        create("demo") {
+            dimension = "mode"
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            resValue("string", "app_name", "BOKRA Demo")
+            buildConfigField("String", "START_PAGE", "\"demo/index.html\"")
+            buildConfigField("boolean", "DEMO", "true")
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
