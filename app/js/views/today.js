@@ -2,7 +2,7 @@ import * as M from '../model.js';
 import { header, ch, empty } from '../ui.js';
 import { icon } from '../icons.js';
 import { dayArc } from '../illus.js';
-import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm } from '../util.js';
+import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm, esc } from '../util.js';
 import { taskRow, tile } from './parts.js';
 
 export function render() {
@@ -16,7 +16,7 @@ export function render() {
   return `${header('Today', sub, '', { greet: true })}
   <div class="today-grid">
     <section class="a-pray">${prayerCard(k)}</section>
-    <section class="a-top3">${top3Card(k)}</section>
+    <section class="a-top3">${voiceCard()}${top3Card(k)}</section>
     <section class="a-trk">
       <div class="sec en">Habits <span class="meta">${doneN} اتعملوا النهارده</span></div>
       <div class="grid">${list.map((t) => tile(t, k)).join('')}
@@ -56,7 +56,21 @@ function prayerCard(k) {
   return `<div class="card pray">${hero}
     ${dayArc(list, now, current?.key)}
     <div class="pray-row">${row}</div>
-    <div class="pray-foot"><span class="meta">${n} من 5 النهارده</span><span class="meta">${M.prayerWeekCount(k)} من 35 الأسبوع ده</span></div></div>`;
+    <div class="pray-foot"><span class="meta" data-anim>${n} من 5 النهارده</span><span class="meta" data-anim>${M.prayerWeekCount(k)} من 35 الأسبوع ده</span></div></div>`;
+}
+
+function voiceCard() {
+  const done = M.inboxDone(12).filter((i) => !i.data.seen);
+  const pend = M.inbox().filter((i) => i.data.source === 'voice');
+  if (!done.length && !pend.length) return '';
+  const right = done.length
+    ? `<button class="ibtn" data-act="voice-seen" aria-label="تمام">${icon('check', 16)}</button>`
+    : `<span class="meta">${pend.length} مستني Claude</span>`;
+  const cut = (t) => (t.length > 90 ? `${t.slice(0, 90)}…` : t);
+  return `<div class="card" data-key="vcard">${ch('Voice', 'mic', right)}
+    ${done.slice(0, 3).map((i) => `<div class="vres"><p class="vq">«${esc(cut(i.data.text))}»</p><p class="va">${icon('sparkles', 14)}<span>${esc(i.data.result)}</span></p></div>`).join('')}
+    ${pend.length ? `<p class="hint" style="margin-top:${done.length ? 8 : 0}px">${done.length ? `و${pend.length} لسه` : 'اتسجّل'}. أول ما Claude يتوصل هيحط كل حاجة في مكانها.</p>` : ''}
+  </div>`;
 }
 
 function top3Card(k) {

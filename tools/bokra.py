@@ -4,6 +4,7 @@
   python tools/bokra.py brief            one or two lines for the start of a Claude session (silent if not set up)
   python tools/bokra.py pull [--days 14]  compact JSON of the last N days, for a review
   python tools/bokra.py push FILE.json    upload {"items":[...]} (reports, suggestions, notes)
+  python tools/bokra.py apply FILE.json   apply {"ops":[...]} from voice/inbox notes (entries, prayers, expenses, tasks)
   python tools/bokra.py whoami            check the connection
   python tools/bokra.py login             one time: paste the anon key, type email + password (password is never saved)
 
@@ -14,6 +15,7 @@ import datetime as dt
 import getpass
 import json
 import pathlib
+import secrets
 import sys
 import time
 import urllib.error
@@ -214,7 +216,7 @@ def summarize(rows, days):
         "tasks_open": [{"id": t["id"], "title": t["data"].get("title"), "date": t["data"].get("date"),
                         "time": t["data"].get("time"), "area": t["data"].get("area")}
                        for t in sorted(tasks, key=lambda t: (t["data"].get("date") or "9999")) if not t["data"].get("done")],
-        "inbox": [{"id": i["id"], "text": i["data"].get("text"), "at": i["data"].get("created_at")}
+        "inbox": [{"id": i["id"], "text": i["data"].get("text"), "source": i["data"].get("source", "text"), "at": i["data"].get("created_at")}
                   for i in sorted(by_kind.get("inbox", []), key=by_created) if not i["data"].get("processed")],
         "schedule_notes": [n["data"] for n in sorted(by_kind.get("note", []), key=by_created) if n["data"].get("type") == "schedule"][-2:],
         "recent_reports": [{"id": r["id"], **r["data"]} for r in sorted(by_kind.get("report", []), key=by_created, reverse=True)[:4]],
@@ -250,10 +252,12 @@ def cmd_brief(env):
     if pending:
         parts.append(f"{len(pending)} مقترحات مستنية موافقته")
     if inbox:
-        parts.append(f"{len(inbox)} حاجات في «دماغي»")
+        voice = sum(1 for r in inbox if r["data"].get("source") == "voice")
+        parts.append(f"{len(inbox)} حاجات في «دماغي» مستنية تتعالج" + (f" ({voice} بصوته)" if voice else ""))
+        due = True
     print("BOKRA (سيستم أحمد اليومي): " + " · ".join(parts) + ".")
     if due:
-        print("لو مناسب، اعرض عليه في سطر واحد تعمل مراجعة BOKRA دلوقتي بالـ skill bokra-review.")
+        print("لو مناسب، اعرض عليه في سطر واحد تعالج «دماغي» وتعمل مراجعة BOKRA دلوقتي بالـ skill bokra-review.")
 
 
 def cmd_pull(env, days):
@@ -285,6 +289,84 @@ def cmd_push(env, path):
     print(f"pushed {len(rows)} items: " + ", ".join(r["id"] for r in rows))
 
 
+def short_id(prefix):
+    return prefix + format(int(time.time() * 1000), "x")[-8:] + secrets.token_hex(3)
+
+
+def cmd_apply(env, path):
+    """Apply what he said in «دماغي» (voice or text) directly to his data. Ops:
+    entry {tracker,date,value|add} · prayer {date,key,done} · sleep {tracker,date,slept,woke}
+    expense {tracker,date,amount,category,note} · task {title,date,time,area} · task_done {id}
+    inbox_done {id,result}  (result = one Arabic line shown back to him)
+    """
+    s = login(env)
+    j = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+    ops = j.get("ops", [])
+    url = env["SUPABASE_URL"].rstrip("/")
+    need = set()
+    for o in ops:
+        if o.get("op") == "entry" and "add" in o:
+            need.add(f"e:{o['tracker']}:{o['date']}")
+        if o.get("op") in ("task_done", "inbox_done"):
+            need.add(o["id"])
+    current = {}
+    if need:
+        ids = ",".join('"' + i.replace('"', "") + '"' for i in need)
+        for r in http("GET", f"{url}/rest/v1/bokra_items?select=id,kind,data&id=in.({urllib.parse.quote(ids)})", rest_headers(env, s)):
+            current[r["id"]] = r
+    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    rows, log = {}, []
+
+    def put(id_, kind, data):
+        rows[id_] = {"id": id_, "user_id": s["user_id"], "kind": kind, "data": data, "updated_at": now, "deleted": False}
+
+    for o in ops:
+        op = o.get("op")
+        if op == "entry":
+            eid = f"e:{o['tracker']}:{o['date']}"
+            if "add" in o:
+                base = (rows.get(eid) or current.get(eid) or {}).get("data", {}).get("value") or 0
+                value = (float(base) if not isinstance(base, dict) else 0) + float(o["add"])
+                value = int(value) if value == int(value) else value
+            else:
+                value = o.get("value")
+            put(eid, "entry", {"tracker": o["tracker"], "date": o["date"], "value": value})
+            log.append(f"{o['tracker']} {o['date']} = {value}")
+        elif op == "prayer":
+            put(f"p:{o['date']}:{o['key']}", "prayer", {"date": o["date"], "key": o["key"], "done": o.get("done", True)})
+            log.append(f"prayer {o['date']} {o['key']}")
+        elif op == "sleep":
+            put(f"e:{o['tracker']}:{o['date']}", "entry", {"tracker": o["tracker"], "date": o["date"], "value": {"slept": o["slept"], "woke": o["woke"]}})
+            log.append(f"sleep {o['date']}")
+        elif op == "expense":
+            put(short_id("x_"), "expense", {"tracker": o.get("tracker", "t_money"), "amount": float(o["amount"]), "category": o.get("category", ""),
+                                             "note": o.get("note", ""), "date": o["date"], "created_at": now})
+            log.append(f"expense {o['amount']}")
+        elif op == "task":
+            put(short_id("k_"), "task", {"title": o["title"], "date": o.get("date"), "time": o.get("time"), "area": o.get("area", ""), "notes": "",
+                                         "top3": o.get("top3"), "top3_order": 0, "done": False, "created_at": now, "source": "voice"})
+            log.append(f"task {o['title']}")
+        elif op == "task_done":
+            cur = current.get(o["id"])
+            if not cur:
+                print(f"skip task_done: {o['id']} not found", file=sys.stderr)
+                continue
+            put(o["id"], "task", {**cur["data"], "done": True, "done_at": now})
+            log.append(f"done {cur['data'].get('title')}")
+        elif op == "inbox_done":
+            cur = current.get(o["id"])
+            data = {**(cur["data"] if cur else {}), "processed": True, "processed_at": now, "result": o.get("result", "")}
+            put(o["id"], "inbox", data)
+            log.append(f"inbox {o['id']} processed")
+        else:
+            print(f"skip unknown op: {op}", file=sys.stderr)
+    if not rows:
+        print("nothing to apply")
+        return
+    http("POST", f"{url}/rest/v1/bokra_items?on_conflict=user_id,id", rest_headers(env, s, {"Prefer": "resolution=merge-duplicates,return=minimal"}), list(rows.values()))
+    print(f"applied {len(rows)} changes: " + " | ".join(log))
+
+
 def main():
     env = load_env()
     args = sys.argv[1:]
@@ -311,6 +393,8 @@ def main():
             cmd_pull(env, days)
         elif cmd == "push":
             cmd_push(env, args[1])
+        elif cmd == "apply":
+            cmd_apply(env, args[1])
         elif cmd == "whoami":
             s = login(env)
             print(f"ok: {s['email']} ({s['user_id']})")

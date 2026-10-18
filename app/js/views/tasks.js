@@ -34,6 +34,7 @@ export function render() {
   </form>
   <p class="hint">عايز ميعاد أو تذكير؟ دوس على <b>+</b> واختار Task.</p>
   ${inboxCard()}
+  ${doneCard()}
   ${groups.map(([name, ic, list]) => `<div class="card" data-key="g-${name}">${ch(name, ic, `<span class="meta">${list.length}</span>`)}
      <ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul></div>`).join('')}
   ${!groups.length && !M.inbox().length ? `<div class="card">${empty('مفيش مهام مفتوحة. ضيف واحدة من فوق.', 'tasks')}</div>` : ''}
@@ -46,10 +47,18 @@ function inboxCard() {
   if (!items.length) return '';
   return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="meta">دماغي · ${items.length}</span>`)}
     <ul class="tl">${items.map((i) => `<li class="task" data-key="${i.id}">
-      <div class="t-main"><div class="t-title">${esc(i.data.text)}</div><div class="t-meta">${ago(i.data.created_at)}</div></div>
+      <div class="t-main"><div class="t-title">${esc(i.data.text)}</div><div class="t-meta">${i.data.source === 'voice' ? `<span class="tag voice">${icon('mic', 14)}صوت</span>` : ''}<span class="tag">${ago(i.data.created_at)}</span></div></div>
       <button class="ibtn" data-act="inbox-task" data-id="${i.id}" aria-label="حوّلها لمهمة">${icon('plus', 18)}</button>
       <button class="ibtn" data-act="inbox-done" data-id="${i.id}" aria-label="خلاص">${icon('check', 18)}</button>
       <button class="ibtn" data-act="inbox-del" data-id="${i.id}" aria-label="امسح">${icon('trash', 18)}</button>
     </li>`).join('')}</ul>
-    <p class="hint">لو سبتهم، Claude هيقترح يحوّلهم لمهام في المراجعة الجاية.</p></div>`;
+    <p class="hint">Claude هيحط كل واحدة في مكانها أول ما يتوصل: يسجّل اللي عملته، ويعمل المهام، ويسجّل المصاريف.</p></div>`;
+}
+
+function doneCard() {
+  const items = M.inboxDone(48);
+  if (!items.length) return '';
+  return `<div class="card" data-key="inbox-done"><details><summary>${ch('Claude applied', 'sparkles', `<span class="meta">${items.length} ${icon('chevD', 14)}</span>`)}</summary>
+    ${items.map((i) => `<div class="vres" data-key="${i.id}"><p class="vq">«${esc(i.data.text)}»</p><p class="va">${icon('check', 14)}<span>${esc(i.data.result)}</span></p></div>`).join('')}
+  </details></div>`;
 }

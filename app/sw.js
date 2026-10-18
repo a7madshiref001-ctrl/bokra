@@ -1,9 +1,9 @@
 // Offline shell for the desktop / browser app. Supabase calls always go to the network.
-const VERSION = 'bokra-v1.1.0';
+const VERSION = 'bokra-v1.2.0';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/main.js', './js/db.js', './js/model.js', './js/sync.js', './js/prayer.js', './js/util.js', './js/icons.js',
-  './js/ui.js', './js/native.js', './js/sheets.js', './js/illus.js', './js/config.js',
+  './js/ui.js', './js/native.js', './js/sheets.js', './js/illus.js', './js/config.js', './js/voice.js',
   './js/views/parts.js', './js/views/today.js', './js/views/tasks.js', './js/views/week.js', './js/views/review.js', './js/views/settings.js',
   './icons/favicon.svg', './icons/icon-192.png', './icons/icon-512.png',
 ];

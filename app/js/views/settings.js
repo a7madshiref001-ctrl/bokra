@@ -14,7 +14,7 @@ export const LEVELS = {
   4: 'ويرجع يفكرك وقت الأذان لو لسه',
   5: 'ويفضل يفكرك كل 20 دقيقة',
 };
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 export function render() {
   return `${header('Settings', 'المزامنة، والصلاة، والحاجات اللي بتتابعها')}

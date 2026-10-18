@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -29,6 +30,26 @@ class MainActivity : ComponentActivity() {
     private val pickFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         fileCb?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
         fileCb = null
+    }
+
+    private val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        val text = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        val arg = if (text != null) JSONObject.quote(text) else "null"
+        web.evaluateJavascript("window.bokraVoiceResult && bokraVoiceResult($arg)", null)
+    }
+
+    /** Google voice typing in Egyptian Arabic; the text goes back to the web app. */
+    fun startVoice() {
+        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-EG")
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-EG")
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "قول اللي عملته أو اللي عايز تعمله")
+        try {
+            voiceLauncher.launch(i)
+        } catch (e: Exception) {
+            web.evaluateJavascript("window.bokraVoiceResult && bokraVoiceResult(null, 'unavailable')", null)
+        }
     }
 
     companion object {
@@ -155,6 +176,7 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface fun openSettings(which: String) { runOnUiThread { c.openSettings(which) } }
         @JavascriptInterface fun testNotification() { Notifier.test(c) }
+        @JavascriptInterface fun startVoice() { runOnUiThread { c.startVoice() } }
 
         @JavascriptInterface fun share(json: String) {
             val j = try { JSONObject(json) } catch (e: Exception) { JSONObject() }

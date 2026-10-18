@@ -13,6 +13,7 @@ export function taskRow(t, k) {
   if (d.time) meta.push(`<span class="tag">${icon('bell', 14)}${fmtHm(d.time)}</span>`);
   if (d.area) meta.push(`<span class="tag">${esc(d.area)}</span>`);
   if (d.source === 'claude') meta.push(`<span class="tag">${icon('sparkles', 14)}Claude</span>`);
+  if (d.source === 'voice') meta.push(`<span class="tag voice">${icon('mic', 14)}من صوتك</span>`);
   return `<li class="task ${d.done ? 'done' : ''}" data-key="${t.id}">
     <button class="cb" data-act="task-toggle" data-id="${t.id}" aria-label="${d.done ? 'رجّعها' : 'خلصت'}">${icon('check', 16)}</button>
     <div class="t-main" data-act="task-edit" data-id="${t.id}">
@@ -122,7 +123,7 @@ export function tile(t, k) {
 
   return `<div class="tile ${met ? 'met' : ''}" data-key="${t.id}">
     <div class="tile-h" data-act="tracker-edit" data-id="${t.id}"><span class="ti">${icon(met ? 'check' : d.icon || 'diamond', 18)}</span><span>${esc(d.name)}</span></div>
-    <div class="tile-v ${vCls}" ${vCls === 'hide' ? 'data-act="reveal"' : ''}>${v}</div>
+    <div class="tile-v ${vCls}" data-anim ${vCls === 'hide' ? 'data-act="reveal"' : ''}>${v}</div>
     ${s ? `<div class="tile-s">${s}</div>` : ''}
     ${b}
     <div class="tile-a">${a}</div>

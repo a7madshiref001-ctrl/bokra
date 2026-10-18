@@ -63,7 +63,14 @@ function patchChildren(a, b) {
     const na = an[i];
     if (!na) { a.appendChild(nb); return; }
     if (!same(na, nb)) { a.replaceChild(nb, na); return; }
-    if (na.nodeType !== 1) { if (na.nodeValue !== nb.nodeValue) na.nodeValue = nb.nodeValue; return; }
+    if (na.nodeType !== 1) {
+      if (na.nodeValue !== nb.nodeValue) {
+        na.nodeValue = nb.nodeValue;
+        const t = na.parentElement?.closest('[data-anim]');
+        if (t) { t.classList.remove('bump'); void t.offsetWidth; t.classList.add('bump'); }
+      }
+      return;
+    }
     patchEl(na, nb);
   });
   for (let i = an.length - 1; i >= bn.length; i--) a.removeChild(an[i]);

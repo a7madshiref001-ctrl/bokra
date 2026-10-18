@@ -8,6 +8,7 @@ import { closeSheet, sheetOpen, morph, enableSheetSwipe, buzz } from './ui.js';
 import { CITIES } from './prayer.js';
 import { SUPABASE_URL } from './config.js';
 import * as S from './sheets.js';
+import * as V from './voice.js';
 import { startTimer, stopTimer, timers, elapsed } from './views/parts.js';
 import { claudePrompt } from './views/review.js';
 import { LEVELS } from './views/settings.js';
@@ -33,13 +34,17 @@ function render(reset = false) {
   const html = VIEWS[current].render();
   if (reset) {
     el.innerHTML = html;
+    $$('.vh, .card, .tile, .sec, .sugg, .quick', el).forEach((n, i) => n.style.setProperty('--d', `${Math.min(i, 12) * 45}ms`));
     el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
+    clearTimeout(render.t); render.t = setTimeout(() => el.classList.remove('enter'), 1300);
     window.scrollTo(0, 0);
   } else {
     morph(el, html);
   }
   $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === current));
   document.body.classList.toggle('no-capture', !['today', 'tasks'].includes(current));
+  const pend = M.inbox().length;
+  $$('[data-voice-badge]').forEach((b) => { b.hidden = !pend; b.textContent = pend; });
 }
 function route() {
   const h = (location.hash || '#today').slice(1);
@@ -74,6 +79,25 @@ window.bokraBack = () => {
   return false;
 };
 
+// small diamond burst from a button (Athr "diamond reveal")
+function burst(el) {
+  const r = el.getBoundingClientRect();
+  const b = document.createElement('div');
+  b.className = 'burst';
+  b.style.left = `${r.left + r.width / 2}px`;
+  b.style.top = `${r.top + r.height / 2}px`;
+  for (let i = 0; i < 10; i++) {
+    const a = (Math.PI * 2 * i) / 10;
+    const d = i % 2 ? 42 : 64;
+    const n = document.createElement('i');
+    n.style.setProperty('--x', `${Math.cos(a) * d}px`);
+    n.style.setProperty('--y', `${Math.sin(a) * d}px`);
+    b.appendChild(n);
+  }
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 900);
+}
+
 // ---------- actions ----------
 const loginError = (m) => ({
   'Invalid login credentials': 'الإيميل أو الباسورد غلط',
@@ -90,7 +114,11 @@ const A = {
   'add-inbox': () => { closeSheet(); const i = $('.capture input'); if (i) i.focus(); },
   'add-goal': () => S.goalForm(),
 
-  pray: (el) => { buzz(18); M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
+  pray: (el) => { buzz(18); burst(el); M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
+  voice: () => V.open(),
+  'voice-toggle': () => V.toggle(),
+  'voice-save': () => V.save(),
+  'voice-seen': () => M.inboxDone(12).forEach((i) => db.patch(i.id, { seen: true })),
   'pray-toggle': (el) => { buzz(); const { k, key } = el.dataset; M.setPrayer(k, key, !M.prayerDone(k, key)); },
 
   'task-toggle': (el) => { buzz(); M.toggleTask(el.dataset.id); },

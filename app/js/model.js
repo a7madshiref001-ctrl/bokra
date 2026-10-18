@@ -230,7 +230,11 @@ export function byTask(a, b) {
 
 // ---------- inbox (دماغي) ----------
 export const inbox = () => db.all('inbox').filter((i) => !i.data.processed).sort((a, b) => (b.data.created_at || '').localeCompare(a.data.created_at || ''));
-export function addInbox(text) { db.put('inbox', uid('i_'), { text, created_at: nowISO(), processed: false }); }
+export function addInbox(text, source = 'text') { db.put('inbox', uid('i_'), { text, source, created_at: nowISO(), processed: false }); }
+// what Claude did with recent notes (shown back to you), newest first
+export const inboxDone = (hours = 48) => db.all('inbox')
+  .filter((i) => i.data.processed && i.data.result && Date.now() - new Date(i.data.processed_at || i.data.created_at) < hours * 3600e3)
+  .sort((a, b) => (b.data.processed_at || '').localeCompare(a.data.processed_at || ''));
 
 // ---------- goals ----------
 export const goals = () => db.all('goal').sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
@@ -419,7 +423,7 @@ export function summaryForClaude(days = 14) {
     shifts_next: next7,
     top3_today: top3(k).map((t) => ({ id: t.id, title: t.data.title, done: !!t.data.done })),
     tasks_open: tasks().filter((t) => !t.data.done).sort(byTask).map((t) => ({ id: t.id, title: t.data.title, date: t.data.date, time: t.data.time, area: t.data.area })),
-    inbox: inbox().map((i) => ({ id: i.id, text: i.data.text, at: i.data.created_at })),
+    inbox: inbox().map((i) => ({ id: i.id, text: i.data.text, source: i.data.source || 'text', at: i.data.created_at })),
     schedule_notes: db.all('note').filter((n) => n.data.type === 'schedule').slice(-2).map((n) => n.data),
     recent_reports: reports().slice(0, 4).map((r) => ({ id: r.id, ...r.data })),
     recent_suggestions: db.all('suggestion').sort((a, b) => (b.data.created_at || '').localeCompare(a.data.created_at || '')).slice(0, 15).map((s) => ({ id: s.id, title: s.data.title, status: s.data.status, action: s.data.action })),

@@ -14,13 +14,17 @@ let flushing = false;
 function openIDB() {
   return new Promise((resolve) => {
     if (!('indexedDB' in window)) return resolve(null);
+    // never let a stuck database keep the app from opening; fall back to localStorage
+    const t = setTimeout(() => resolve(null), 2500);
+    const done = (v) => { clearTimeout(t); resolve(v); };
     const req = indexedDB.open(DB_NAME, 1);
+    req.onblocked = () => done(null);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null);
+    req.onsuccess = () => done(req.result);
+    req.onerror = () => done(null);
   });
 }
 
@@ -36,6 +40,12 @@ export async function init() {
     req.onsuccess = () => { (req.result || []).forEach((i) => mem.set(i.id, i)); resolve(); };
     req.onerror = () => resolve();
   });
+  // anything saved while IndexedDB was unavailable comes back in (newer wins)
+  try {
+    const saved = JSON.parse(localStorage.getItem('bokra.items') || '[]');
+    saved.forEach((i) => { const cur = mem.get(i.id); if (!cur || (i.updated_at || '') > (cur.updated_at || '')) { mem.set(i.id, i); persist(i); } });
+    localStorage.removeItem('bokra.items');
+  } catch (e) { /* nothing saved */ }
 }
 
 function persist(item) {
