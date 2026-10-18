@@ -152,6 +152,27 @@ export function enableSheetSwipe() {
   });
 }
 
+// small diamond burst from an element (Athr "diamond reveal"); small = for habit rows
+export function burst(el, small = false) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const b = document.createElement('div');
+  b.className = `burst ${small ? 'sm' : ''}`;
+  b.style.left = `${r.left + r.width / 2}px`;
+  b.style.top = `${r.top + r.height / 2}px`;
+  const n = small ? 8 : 10;
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n;
+    const d = small ? (i % 2 ? 24 : 36) : (i % 2 ? 42 : 64);
+    const dot = document.createElement('i');
+    dot.style.setProperty('--x', `${Math.cos(a) * d}px`);
+    dot.style.setProperty('--y', `${Math.sin(a) * d}px`);
+    b.appendChild(dot);
+  }
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 900);
+}
+
 // short vibration on Android for key actions
 export function buzz(ms = 10) {
   try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(ms); } catch (e) { /* not supported */ }

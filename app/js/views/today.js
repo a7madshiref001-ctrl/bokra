@@ -3,7 +3,7 @@ import { header, ch, empty } from '../ui.js';
 import { icon } from '../icons.js';
 import { dayArc } from '../illus.js';
 import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm, esc } from '../util.js';
-import { taskRow, tile } from './parts.js';
+import { taskRow, habitRow, isComplete } from './parts.js';
 
 export function render() {
   const k = M.today();
@@ -12,15 +12,15 @@ export function render() {
   const shTxt = sh ? (sh.off ? 'إجازة النهارده' : `الشيفت ${fmtHm(sh.start)} ← ${fmtHm(sh.end)}`) : '';
   const sub = [fmtLongDate(d), fmtHijri(d), shTxt].filter(Boolean).join(' · ');
   const list = M.trackers().filter((t) => t.data.period === 'week' || M.activeOn(t, k));
-  const doneN = list.filter((t) => ['check', 'count', 'duration'].includes(t.data.type) && M.progress(t, k).ratio >= 1).length;
+  const doneN = list.filter((t) => isComplete(t, k)).length;
   return `${header('Today', sub, '', { greet: true })}
   <div class="today-grid">
     <section class="a-pray">${prayerCard(k)}</section>
     <section class="a-top3">${voiceCard()}${top3Card(k)}</section>
     <section class="a-trk">
       <div class="sec en">Habits <span class="meta">${doneN} اتعملوا النهارده</span></div>
-      <div class="grid">${list.map((t) => tile(t, k)).join('')}
-        <button class="tile add-tile" data-act="add-tracker" data-key="add"><span class="ti">${icon('plus', 22)}</span><span>حاجة جديدة تتابعها</span></button>
+      <div class="habits">${list.map((t) => habitRow(t, k)).join('')}
+        <button class="habit add" data-act="add-tracker" data-key="add"><div class="hrow"><span class="hic">${icon('plus', 20)}</span><div class="hmain"><div class="hname">حاجة جديدة تتابعها</div><div class="hmeta">عادة، رقم، وقت، أو فلوس</div></div></div></button>
       </div>
     </section>
     <section class="a-tasks">${tasksCard(k)}</section>

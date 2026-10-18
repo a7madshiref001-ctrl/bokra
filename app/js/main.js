@@ -4,13 +4,13 @@ import * as sync from './sync.js';
 import { isNative, call, callJSON } from './native.js';
 import { icon } from './icons.js';
 import { $, $$, toast, debounce, copyText, dlFile, shiftKey } from './util.js';
-import { closeSheet, sheetOpen, morph, enableSheetSwipe, buzz } from './ui.js';
+import { closeSheet, sheetOpen, morph, enableSheetSwipe, buzz, burst } from './ui.js';
 import { CITIES } from './prayer.js';
 import { SUPABASE_URL, DEMO } from './config.js';
 import { seedDemo } from './demo.js';
 import * as S from './sheets.js';
 import * as V from './voice.js';
-import { startTimer, stopTimer, timers, elapsed } from './views/parts.js';
+import { startTimer, stopTimer, timers, elapsed, isComplete, afterChange } from './views/parts.js';
 import { claudePrompt } from './views/review.js';
 import { LEVELS } from './views/settings.js';
 import * as today from './views/today.js';
@@ -80,25 +80,6 @@ window.bokraBack = () => {
   return false;
 };
 
-// small diamond burst from a button (Athr "diamond reveal")
-function burst(el) {
-  const r = el.getBoundingClientRect();
-  const b = document.createElement('div');
-  b.className = 'burst';
-  b.style.left = `${r.left + r.width / 2}px`;
-  b.style.top = `${r.top + r.height / 2}px`;
-  for (let i = 0; i < 10; i++) {
-    const a = (Math.PI * 2 * i) / 10;
-    const d = i % 2 ? 42 : 64;
-    const n = document.createElement('i');
-    n.style.setProperty('--x', `${Math.cos(a) * d}px`);
-    n.style.setProperty('--y', `${Math.sin(a) * d}px`);
-    b.appendChild(n);
-  }
-  document.body.appendChild(b);
-  setTimeout(() => b.remove(), 900);
-}
-
 // ---------- actions ----------
 const loginError = (m) => ({
   'Invalid login credentials': 'الإيميل أو الباسورد غلط',
@@ -129,8 +110,14 @@ const A = {
   'pick-top3': (el) => S.top3Picker(el.dataset.k),
   'top3-pick': (el) => { buzz(); if (!M.setTop3(el.dataset.id, el.dataset.k)) toast('3 بس'); S.top3Picker(el.dataset.k); },
 
-  'trk-check': (el) => { buzz(); const { id, k } = el.dataset; M.setEntry(id, k, M.entry(id, k) === 1 ? 0 : 1); },
-  'trk-inc': (el) => { buzz(); const { id, k, n } = el.dataset; M.setEntry(id, k, Math.max(0, (Number(M.entry(id, k)) || 0) + Number(n))); },
+  'trk-check': (el) => {
+    buzz(); const { id, k } = el.dataset; const was = isComplete(db.get(id), k);
+    M.setEntry(id, k, M.entry(id, k) === 1 ? 0 : 1); afterChange(id, k, was);
+  },
+  'trk-inc': (el) => {
+    buzz(); const { id, k, n } = el.dataset; const was = isComplete(db.get(id), k);
+    M.setEntry(id, k, Math.max(0, (Number(M.entry(id, k)) || 0) + Number(n))); afterChange(id, k, was);
+  },
   'trk-number': (el) => S.numberForm(el.dataset.id, el.dataset.k),
   'trk-sleep': (el) => S.sleepForm(el.dataset.id, el.dataset.k),
   'trk-slip': (el) => S.slipConfirm(el.dataset.id, el.dataset.k),
@@ -138,7 +125,12 @@ const A = {
   'timer-start': (el) => { startTimer(el.dataset.id, el.dataset.k); render(); },
   'timer-stop': (el) => {
     const r = stopTimer(el.dataset.id);
-    if (r) { M.setEntry(el.dataset.id, r.k, (Number(M.entry(el.dataset.id, r.k)) || 0) + r.minutes); toast(`اتسجّل ${r.minutes} دقيقة`); }
+    if (r) {
+      const was = isComplete(db.get(el.dataset.id), r.k);
+      M.setEntry(el.dataset.id, r.k, (Number(M.entry(el.dataset.id, r.k)) || 0) + r.minutes);
+      toast(`اتسجّل ${r.minutes} دقيقة`);
+      afterChange(el.dataset.id, r.k, was);
+    }
     render();
   },
   'tracker-edit': (el) => S.trackerForm(el.dataset.id),

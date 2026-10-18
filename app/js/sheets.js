@@ -4,6 +4,7 @@ import * as db from './db.js';
 import { openSheet, closeSheet, chips } from './ui.js';
 import { icon, ICON_NAMES } from './icons.js';
 import { DEMO } from './config.js';
+import { isComplete, afterChange } from './views/parts.js';
 import { esc, shiftKey, parseKey, fmtDayMonth, DAY_NAMES, WEEK_ORDER, pad, toast } from './util.js';
 
 const AREAS = ['عام', 'أثر', 'العيادات', 'الشغل', 'البيت', 'دين'];
@@ -281,12 +282,21 @@ export const forms = {
     if (f.dataset.id) db.patch(f.dataset.id, p); else M.addGoal(p);
     closeSheet(); toast('اتحفظ');
   },
-  sleep(f, fd) { M.setEntry(f.dataset.id, f.dataset.k, { slept: fd.get('slept'), woke: fd.get('woke') }); closeSheet(); },
-  number(f, fd) {
-    const raw = String(fd.get('value') || '').trim();
-    if (raw === '') db.remove(M.entryId(f.dataset.id, f.dataset.k));
-    else M.setEntry(f.dataset.id, f.dataset.k, Number(raw.replace(',', '.')) || 0);
+  sleep(f, fd) {
+    const { id, k } = f.dataset;
+    const was = isComplete(db.get(id), k);
+    M.setEntry(id, k, { slept: fd.get('slept'), woke: fd.get('woke') });
     closeSheet();
+    afterChange(id, k, was);
+  },
+  number(f, fd) {
+    const { id, k } = f.dataset;
+    const was = isComplete(db.get(id), k);
+    const raw = String(fd.get('value') || '').trim();
+    if (raw === '') db.remove(M.entryId(id, k));
+    else M.setEntry(id, k, Number(raw.replace(',', '.')) || 0);
+    closeSheet();
+    afterChange(id, k, was);
   },
   shift(f, fd) {
     const mode = fd.get('mode');
