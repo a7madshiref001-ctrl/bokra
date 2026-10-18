@@ -27,17 +27,16 @@ export function render() {
   const done = all.filter((t) => t.data.done && t.data.done_at && Date.now() - new Date(t.data.done_at) < 7 * 864e5)
     .sort((a, b) => b.data.done_at.localeCompare(a.data.done_at));
 
-  return `${header('Tasks', open.length ? `${open.length} مهمة مفتوحة` : 'مفيش حاجة مفتوحة')}
+  return `${header('Tasks')}
   <form class="quick" data-form="quick-task" data-date="${k}" style="margin-top:16px">
-    <input class="in" name="title" placeholder="مهمة جديدة للنهارده" autocomplete="off" enterkeyhint="done" aria-label="مهمة جديدة">
+    <input class="in" name="title" placeholder="مهمة جديدة…" autocomplete="off" enterkeyhint="done" aria-label="مهمة جديدة">
     <button class="btn btn-primary" aria-label="ضيف">${icon('plus')}</button>
   </form>
-  <p class="hint">عايز ميعاد أو تذكير؟ دوس على <b>+</b> واختار Task.</p>
   ${inboxCard()}
   ${doneCard()}
   ${groups.map(([name, ic, list]) => `<div class="card" data-key="g-${name}">${ch(name, ic, `<span class="meta">${list.length}</span>`)}
      <ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul></div>`).join('')}
-  ${!groups.length && !M.inbox().length ? `<div class="card">${empty('مفيش مهام مفتوحة. ضيف واحدة من فوق.', 'tasks')}</div>` : ''}
+  ${!groups.length && !M.inbox().length ? `<div class="card">${empty('', 'tasks')}</div>` : ''}
   ${done.length ? `<div class="card" data-key="done"><details><summary>${ch('Done this week', 'check', `<span class="meta">${done.length} ${icon('chevD', 14)}</span>`)}</summary>
      <ul class="tl">${done.map((t) => taskRow(t, k)).join('')}</ul></details></div>` : ''}`;
 }
@@ -45,14 +44,14 @@ export function render() {
 function inboxCard() {
   const items = M.inbox();
   if (!items.length) return '';
-  return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="meta">دماغي · ${items.length}</span>`)}
+  return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="count num">${items.length}</span>`)}
     <ul class="tl">${items.map((i) => `<li class="task" data-key="${i.id}">
       <div class="t-main"><div class="t-title">${esc(i.data.text)}</div><div class="t-meta">${i.data.source === 'voice' ? `<span class="tag voice">${icon('mic', 14)}صوت</span>` : ''}<span class="tag">${ago(i.data.created_at)}</span></div></div>
       <button class="ibtn" data-act="inbox-task" data-id="${i.id}" aria-label="حوّلها لمهمة">${icon('plus', 18)}</button>
       <button class="ibtn" data-act="inbox-done" data-id="${i.id}" aria-label="خلاص">${icon('check', 18)}</button>
       <button class="ibtn" data-act="inbox-del" data-id="${i.id}" aria-label="امسح">${icon('trash', 18)}</button>
     </li>`).join('')}</ul>
-    <p class="hint">Claude هيحط كل واحدة في مكانها أول ما يتوصل: يسجّل اللي عملته، ويعمل المهام، ويسجّل المصاريف.</p></div>`;
+    </div>`;
 }
 
 function doneCard() {

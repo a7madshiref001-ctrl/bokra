@@ -13,13 +13,13 @@ const nowHm = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d
 
 // ---------- add menu ----------
 export function addMenu() {
-  const card = (act, ic, title, sub, acc = false) => `<button class="addcard" data-act="${act}"><span class="ai ${acc ? 'acc' : ''}">${icon(ic, 20)}</span><b class="en">${title}</b><span>${sub}</span></button>`;
-  openSheet('Add', `<div class="addgrid">
-    ${card('add-task', 'list', 'Task', 'حاجة هتعملها مرة، بميعاد أو من غير', true)}
-    ${card('add-tracker', 'refresh', 'Habit', 'عادة أو رقم تتابعه كل يوم أو كل أسبوع')}
-    ${card('add-expense', 'wallet', 'Money', 'مصروف أو فلوس دخلت')}
-    ${card('add-inbox', 'inbox', 'Idea', 'اكتبها في دماغي ورتّبها بعدين')}
-    <button class="addcard wide" data-act="add-goal"><span class="ai">${icon('target', 20)}</span><div><b class="en">Goal</b><br><span>هدف كبير مربوط بحاجة بتتابعها</span></div></button>
+  const card = (act, ic, title, acc = false) => `<button class="addcard" data-act="${act}"><span class="ai ${acc ? 'acc' : ''}">${icon(ic, 22)}</span><b class="en">${title}</b></button>`;
+  openSheet('Add', `<div class="addgrid five">
+    ${card('add-task', 'list', 'Task', true)}
+    ${card('add-tracker', 'refresh', 'Habit')}
+    ${card('add-expense', 'wallet', 'Money')}
+    ${card('add-inbox', 'mic', 'Note')}
+    ${card('add-goal', 'target', 'Goal')}
   </div>`);
 }
 
@@ -30,13 +30,17 @@ export function taskForm(id, preset = {}) {
   const d = t ? t.data : { title: preset.title || '', date: preset.date === undefined ? k : preset.date, time: '', area: '', notes: '', top3: null };
   const mode = !d.date ? 'none' : d.date === k ? 'today' : d.date === shiftKey(k, 1) ? 'tomorrow' : 'pick';
   openSheet(t ? 'Edit task' : 'New task', `<form data-form="task" data-id="${id || ''}" data-inbox="${preset.inbox || ''}">
-    <div class="field"><label class="lbl" for="f-title">المهمة</label><input id="f-title" class="in" name="title" value="${esc(d.title)}" required autofocus autocomplete="off"></div>
-    <div class="field"><span class="lbl">امتى؟</span>${chips('when', [{ value: 'today', label: 'النهارده' }, { value: 'tomorrow', label: 'بكرة' }, { value: 'pick', label: 'يوم تاني' }, { value: 'none', label: 'من غير ميعاد' }], mode)}
+    <input id="f-title" class="in big" name="title" value="${esc(d.title)}" required autofocus autocomplete="off" placeholder="المهمة" aria-label="المهمة">
+    <div class="field">${chips('when', [{ value: 'today', label: 'النهارده' }, { value: 'tomorrow', label: 'بكرة' }, { value: 'pick', label: icon('calendar', 16) }, { value: 'none', label: '—' }], mode)}
       <input class="in ltr" type="date" name="date" value="${d.date || ''}" style="margin-top:8px" data-pick ${mode === 'pick' ? '' : 'hidden'} aria-label="التاريخ"></div>
-    <div class="field"><label class="lbl" for="f-time">فكّرني الساعة (اختياري)</label><input id="f-time" class="in ltr" type="time" name="time" value="${d.time || ''}"></div>
-    <div class="field"><span class="lbl">تبع إيه؟</span>${chips('area', AREAS, d.area)}</div>
-    <label class="toggle" style="margin-top:16px"><span>من أهم 3<small>هتظهر في الويدجت</small></span><input type="checkbox" name="top3" ${d.top3 ? 'checked' : ''}></label>
-    <div class="field"><label class="lbl" for="f-notes">ملاحظات</label><textarea id="f-notes" class="in" name="notes">${esc(d.notes || '')}</textarea></div>
+    <div class="row field">
+      <label class="iconfield">${icon('bell', 18)}<input class="in ltr" type="time" name="time" value="${d.time || ''}" aria-label="فكّرني الساعة"></label>
+      <label class="chip toggle-chip"><input type="checkbox" name="top3" ${d.top3 ? 'checked' : ''}><span>${icon('diamond', 16)} Top 3</span></label>
+    </div>
+    <details class="more"><summary>${icon('sliders', 16)}<span class="en">More</span>${icon('chevD', 16)}</summary>
+      <div class="field">${chips('area', AREAS, d.area)}</div>
+      <div class="field"><textarea class="in" name="notes" placeholder="ملاحظات" aria-label="ملاحظات">${esc(d.notes || '')}</textarea></div>
+    </details>
     <div class="actions"><button class="btn btn-primary">${t ? 'احفظ' : 'ضيف'}</button>
       ${t ? `<button type="button" class="btn btn-danger" data-act="task-del" data-id="${id}">امسح</button>` : ''}</div>
   </form>`);
@@ -67,22 +71,25 @@ function historyStrip(t) {
 export function trackerForm(id) {
   const t = id ? db.get(id) : null;
   const d = t ? t.data : { name: '', type: 'check', unit: '', target: '', period: 'day', days: [], icon: 'diamond', private: false, remind: '', note: '' };
-  const typeOpts = Object.entries(M.TYPES).filter(([v]) => !(DEMO && v === 'streak')).map(([v, o]) => ({ value: v, label: `${o.label}<small>${o.sub}</small>` }));
+  const TI = { check: 'check', count: 'hash', duration: 'timer', number: 'pen', money: 'wallet', streak: 'flame', sleep: 'moon' };
+  const typeOpts = Object.entries(M.TYPES).filter(([v]) => !(DEMO && v === 'streak')).map(([v, o]) => ({ value: v, label: `${icon(TI[v], 20)}<small>${o.label}</small>` }));
   openSheet(t ? esc(d.name) : 'New habit', `${t && !(d.private && d.type === 'streak') ? historyStrip(t) : ''}
   <form data-form="tracker" data-id="${id || ''}">
-    <div class="field"><label class="lbl" for="t-name">اسمها</label><input id="t-name" class="in" name="name" value="${esc(d.name)}" required placeholder="مثلًا: أشرب مية" autofocus autocomplete="off"></div>
-    <div class="field"><span class="lbl">نوعها</span><div class="types">${chips('type', typeOpts, d.type).replace('<div class="chips">', '').replace(/<\/div>$/, '')}</div></div>
+    <input id="t-name" class="in big" name="name" value="${esc(d.name)}" required placeholder="اسمها، مثلًا: مية" autofocus autocomplete="off" aria-label="اسمها">
+    <div class="field"><div class="types">${chips('type', typeOpts, d.type).replace('<div class="chips">', '').replace(/<\/div>$/, '')}</div></div>
     <div class="row field">
       <div><label class="lbl" for="t-target" data-target-lbl>الهدف</label><input id="t-target" class="in ltr" name="target" value="${esc(d.target ?? '')}" inputmode="decimal"></div>
       <div data-unit-wrap><label class="lbl" for="t-unit">الوحدة</label><input id="t-unit" class="in" name="unit" value="${esc(d.unit || '')}" placeholder="صفحة، كوباية…"></div>
     </div>
-    <div class="field" data-period-wrap><span class="lbl">الهدف ده كل</span>${chips('period', [{ value: 'day', label: 'يوم' }, { value: 'week', label: 'أسبوع' }], d.period || 'day')}</div>
-    <div class="field" data-start-wrap hidden><label class="lbl" for="t-start">بدأت من يوم</label><input id="t-start" class="in ltr" type="date" name="start" value="${d.start || M.today()}"></div>
-    <div class="field"><span class="lbl">الأيام (سيبها فاضية يبقى كل يوم)</span>${chips('days', WEEK_ORDER.map((n) => ({ value: n, label: DAY_NAMES[n] })), d.days || [], true)}</div>
-    <div class="field"><label class="lbl" for="t-remind">فكّرني الساعة (اختياري)</label><input id="t-remind" class="in ltr" type="time" name="remind" value="${d.remind || ''}"></div>
-    <div class="field"><label class="lbl" for="t-note">سطر توضيح (اختياري)</label><input id="t-note" class="in" name="note" value="${esc(d.note || '')}" autocomplete="off"></div>
-    <div class="field"><span class="lbl">الأيقونة</span><div class="chips icons">${ICON_NAMES.map((n) => `<label class="chip"><input type="radio" name="icon" value="${n}" ${n === d.icon ? 'checked' : ''}><span>${icon(n, 20)}</span></label>`).join('')}</div></div>
-    <label class="toggle" style="margin-top:16px"><span>خاصة<small>متظهرش في الإشعارات ولا الويدجت، والرقم بيبقى متغطّي</small></span><input type="checkbox" name="private" ${d.private ? 'checked' : ''}></label>
+    <div class="field" data-period-wrap>${chips('period', [{ value: 'day', label: 'كل يوم' }, { value: 'week', label: 'كل أسبوع' }], d.period || 'day')}</div>
+    <div class="field" data-start-wrap hidden><label class="lbl" for="t-start">بدأت من</label><input id="t-start" class="in ltr" type="date" name="start" value="${d.start || M.today()}"></div>
+    <details class="more"><summary>${icon('sliders', 16)}<span class="en">More</span>${icon('chevD', 16)}</summary>
+      <div class="field"><span class="lbl">${icon('calendar', 15)}</span>${chips('days', WEEK_ORDER.map((n) => ({ value: n, label: DAY_NAMES[n] })), d.days || [], true)}</div>
+      <div class="field"><label class="iconfield">${icon('bell', 18)}<input class="in ltr" type="time" name="remind" value="${d.remind || ''}" aria-label="فكّرني الساعة"></label></div>
+      <div class="field"><div class="chips icons">${ICON_NAMES.map((n) => `<label class="chip"><input type="radio" name="icon" value="${n}" ${n === d.icon ? 'checked' : ''}><span>${icon(n, 20)}</span></label>`).join('')}</div></div>
+      <label class="toggle" style="margin-top:16px"><span>${icon('lock', 16)} خاصة</span><input type="checkbox" name="private" ${d.private ? 'checked' : ''}></label>
+      <input type="hidden" name="note" value="${esc(d.note || '')}">
+    </details>
     <div class="actions"><button class="btn btn-primary">${t ? 'احفظ' : 'ضيفها'}</button>
       ${t ? `<button type="button" class="btn" data-act="trk-archive" data-id="${id}">شيلها</button>` : ''}</div>
   </form>`, { ar: !!t });
@@ -133,10 +140,8 @@ export function goalForm(id) {
   const opts = [{ value: 'prayer', label: 'الصلاة' }, ...M.trackers().filter((t) => t.data.type !== 'money').map((t) => ({ value: t.id, label: esc(t.data.name) }))];
   openSheet(g ? 'Edit goal' : 'New goal', `<form data-form="goal" data-id="${id || ''}">
     <div class="field"><label class="lbl" for="g-title">الهدف</label><input id="g-title" class="in" name="title" value="${esc(d.title)}" required autofocus placeholder="مثلًا: أختم القرآن في شهرين" autocomplete="off"></div>
-    <div class="field"><span class="lbl">بيتقاس بإيه؟</span>${chips('tracker', opts, d.tracker)}
-      <p class="hint">مش لاقي اللي يقيسه؟ ضيف «حاجة بتتكرر» الأول.</p></div>
-    <div class="field"><label class="lbl" for="g-target">المطلوب في الأسبوع</label><input id="g-target" class="in ltr" name="target" value="${esc(d.target ?? '')}" inputmode="decimal">
-      <p class="hint">لو بيتقاس بعداد أيام، الرقم ده عدد الأيام.</p></div>
+    <div class="field"><span class="lbl">بيتقاس بإيه؟</span>${chips('tracker', opts, d.tracker)}</div>
+    <div class="field"><label class="lbl" for="g-target">المطلوب في الأسبوع</label><input id="g-target" class="in ltr" name="target" value="${esc(d.target ?? '')}" inputmode="decimal"></div>
     <div class="field"><label class="lbl" for="g-why">ليه؟ (اختياري)</label><input id="g-why" class="in" name="why" value="${esc(d.why || '')}" autocomplete="off"></div>
     <div class="actions"><button class="btn btn-primary">احفظ</button>
       ${g ? `<button type="button" class="btn btn-danger" data-act="goal-del" data-id="${id}">امسح</button>` : ''}</div>
@@ -169,7 +174,6 @@ export function numberForm(tid, k) {
 
 export function slipConfirm(tid, k) {
   openSheet('وقعت؟', `<p>العداد هيرجع صفر، ومش هيتسجل غير التاريخ.</p>
-    <p class="hint">Claude هيدوّر على النمط (أنهي يوم، أنهي ساعة)، مش على اللوم.</p>
     <div class="actions"><button class="btn btn-primary" data-act="slip-yes" data-id="${tid}" data-k="${k}">سجّل</button><button class="btn" data-act="sheet-close">لأ</button></div>`, { ar: true });
 }
 
@@ -190,10 +194,19 @@ export function shiftForm(k) {
   </form>`, { ar: true });
 }
 
+// ---------- work schedule text for Claude ----------
+export function scheduleForm(weekKey) {
+  const note = db.data(`n:schedule:${weekKey}`);
+  openSheet('Work schedule', `<form data-form="schedule-note" data-week="${weekKey}">
+    <textarea class="in" name="text" style="min-height:160px" placeholder="السبت 4م-1ص، الحد 4م-1ص، الاتنين إجازة…" autofocus aria-label="جدول الشغل">${esc(note?.text || '')}</textarea>
+    <div class="actions"><button class="btn btn-primary">${icon('sparkles', 18)} ابعته لـ Claude</button></div>
+  </form>`);
+}
+
 // ---------- top 3 ----------
 export function top3Picker(k) {
   const cands = M.tasks().filter((t) => t.data.top3 === k || (!t.data.done && (!t.data.date || t.data.date <= k))).sort(M.byTask);
-  openSheet('Top 3', `<p class="hint" style="margin-top:0">اختار لحد 3. هيظهروا في الويدجت.</p>
+  openSheet('Top 3', `
     ${cands.length ? `<ul class="tl">${cands.map((t) => `<li class="task">
       <button type="button" class="cb ${t.data.top3 === k ? 'on' : ''}" data-act="top3-pick" data-id="${t.id}" data-k="${k}" aria-label="اختار">${icon('check', 16)}</button>
       <div class="t-main" data-act="top3-pick" data-id="${t.id}" data-k="${k}"><div class="t-title">${esc(t.data.title)}</div></div></li>`).join('')}</ul>` : ''}
@@ -203,7 +216,7 @@ export function top3Picker(k) {
 
 // ---------- Claude manual ----------
 export function copyClaudeMenu() {
-  openSheet('Copy for Claude', `<p class="hint" style="margin-top:0">اختار نوع المراجعة. هتتنسخ البيانات مع التعليمات، الصقها في شات Claude.</p>
+  openSheet('Copy for Claude', `
     <div class="addgrid">
       <button class="addcard" data-act="copy-claude-go" data-type="morning"><span class="ai">${icon('sun', 20)}</span><b class="en">Morning plan</b><span>أول ما تصحى</span></button>
       <button class="addcard" data-act="copy-claude-go" data-type="night"><span class="ai">${icon('moon', 20)}</span><b class="en">Night review</b><span>بعد الشيفت</span></button>

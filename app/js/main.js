@@ -43,7 +43,6 @@ function render(reset = false) {
     morph(el, html);
   }
   $$('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === current));
-  document.body.classList.toggle('no-capture', !['today', 'tasks'].includes(current));
   const pend = M.inbox().length;
   $$('[data-voice-badge]').forEach((b) => { b.hidden = !pend; b.textContent = pend; });
 }
@@ -93,7 +92,7 @@ const A = {
   'add-task': () => S.taskForm(),
   'add-tracker': () => S.trackerForm(),
   'add-expense': (el) => S.expenseForm(el.dataset.id),
-  'add-inbox': () => { closeSheet(); const i = $('.capture input'); if (i) i.focus(); },
+  'add-inbox': () => { closeSheet(); setTimeout(() => V.open(), 220); },
   'add-goal': () => S.goalForm(),
 
   pray: (el) => { buzz(18); burst(el); M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
@@ -146,6 +145,7 @@ const A = {
 
   'week-nav': (el) => { week.state.off += Number(el.dataset.n); render(); window.scrollTo(0, 0); },
   'shift-edit': (el) => S.shiftForm(el.dataset.k),
+  'schedule-paste': (el) => S.scheduleForm(el.dataset.week),
   'shift-copy': (el) => {
     const start = el.dataset.k; let n = 0;
     for (let i = 0; i < 7; i++) {
@@ -205,7 +205,7 @@ const F = {
     const w = f.dataset.week;
     if (!text) { db.remove(`n:schedule:${w}`); return; }
     db.put('note', `n:schedule:${w}`, { type: 'schedule', week: w, text, created_at: new Date().toISOString() });
-    document.activeElement?.blur();
+    closeSheet();
     toast('اتحفظ. Claude هيقراه في المراجعة');
   },
   'sync-cfg'(f, fd) {

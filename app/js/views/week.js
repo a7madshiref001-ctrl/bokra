@@ -2,107 +2,106 @@ import * as M from '../model.js';
 import * as db from '../db.js';
 import { header, bar, empty, ch } from '../ui.js';
 import { icon } from '../icons.js';
-import { esc, shiftKey, parseKey, fmtDayMonth, fmtHm, fmtMoney, fmtMinutes, DAY_NAMES } from '../util.js';
+import { esc, shiftKey, parseKey, fmtDayMonth, fmtHm, fmtMoney, hmToMin, DAY_NAMES } from '../util.js';
 
 export const state = { off: 0 };
+
+// the drawn day runs 6 AM → 6 AM so night shifts stay in one piece
+const DAY0 = 360;
+const pos = (hm) => (((hmToMin(hm) - DAY0) % 1440) + 1440) % 1440 / 1440;
 
 export function render() {
   const k = M.today();
   const base = shiftKey(k, state.off * 7);
   const keys = M.weekKeys(base);
-  const label = state.off === 0 ? 'الأسبوع ده' : state.off === 1 ? 'الأسبوع الجاي' : state.off === -1 ? 'الأسبوع اللي فات' : '';
-  const range = `${fmtDayMonth(parseKey(keys[0]))} – ${fmtDayMonth(parseKey(keys[6]))}${label ? ` · ${label}` : ''}`;
   const nav = `<span class="vh-nav">
     <button class="ibtn" data-act="week-nav" data-n="-1" aria-label="الأسبوع اللي فات">${icon('chevR')}</button>
     <button class="ibtn" data-act="week-nav" data-n="1" aria-label="الأسبوع الجاي">${icon('chevL')}</button></span>`;
-  const isFriday = parseKey(k).getDay() === 5;
-
+  const range = `${fmtDayMonth(parseKey(keys[0]))} – ${fmtDayMonth(parseKey(keys[6]))}`;
   return `${header('Week', range, nav)}
-  ${isFriday && state.off === 0 ? `<div class="card" data-key="friday">${ch('Friday', 'calendar')}<p>النهارده الجمعة. حط جدول الأسبوع الجاي عشان Claude يرتّب عليه.</p>
-     <div class="actions"><button class="btn btn-primary" data-act="week-nav" data-n="1">افتح الأسبوع الجاي</button></div></div>` : ''}
   <div class="cols2">
-    <div>${shiftsCard(keys, k)}${scheduleCard(keys[0])}</div>
-    <div>${goalsCard(base)}${trackersCard(keys)}${moneyCard(keys)}</div>
+    <div>${shiftsCard(keys, k)}${goalsCard(base)}</div>
+    <div>${habitsCard(keys, k)}${moneyCard(keys, k)}</div>
   </div>`;
 }
 
 function shiftsCard(keys, k) {
+  const now = new Date();
+  const nowPos = pos(`${now.getHours()}:${now.getMinutes()}`);
   const rows = keys.map((kk) => {
     const sh = M.shift(kk);
     const dd = parseKey(kk);
-    const txt = !sh ? '<span class="s none">مش متسجل</span>'
-      : sh.off ? '<span class="s off">إجازة</span>'
-        : `<span class="s">${icon('briefcase', 15)}${fmtHm(sh.start)} ← ${fmtHm(sh.end)}</span>`;
-    return `<div class="shrow ${kk === k ? 'is-today' : ''}" data-act="shift-edit" data-k="${kk}" data-key="${kk}" role="button" tabindex="0">
-      <b>${DAY_NAMES[dd.getDay()]}<span class="d">${dd.getDate()}/${dd.getMonth() + 1}</span></b>${txt}${icon('chevL', 16)}</div>`;
+    let track;
+    if (!sh) track = '<span class="tl-track none"></span>';
+    else if (sh.off) track = `<span class="tl-track off">${icon('sun', 15)}</span>`;
+    else {
+      const a = pos(sh.start);
+      let b = pos(sh.end);
+      if (b <= a) b = 1;
+      track = `<span class="tl-track"><span class="tl-block" style="inset-inline-start:${(a * 100).toFixed(1)}%;width:${((b - a) * 100).toFixed(1)}%"><span>${fmtHm(sh.start).replace(/:00/, '')} – ${fmtHm(sh.end).replace(/:00/, '')}</span></span>${kk === k ? `<i class="tl-now" style="inset-inline-start:${(nowPos * 100).toFixed(1)}%"></i>` : ''}</span>`;
+    }
+    return `<button class="tl-row ${kk === k ? 'is-today' : ''}" data-act="shift-edit" data-k="${kk}" data-key="${kk}">
+      <span class="tl-day"><b>${DAY_NAMES[dd.getDay()]}</b><i class="num">${dd.getDate()}</i></span>${track}</button>`;
   }).join('');
-  return `<div class="card" data-key="shifts">${ch('Shifts', 'briefcase', `<button class="btn btn-sm" data-act="shift-copy" data-k="${keys[0]}">${icon('copy', 16)} انسخ اللي فات</button>`)}${rows}</div>`;
-}
-
-function scheduleCard(weekKey) {
-  const note = db.data(`n:schedule:${weekKey}`);
-  return `<div class="card" data-key="sched">${ch('Work schedule', 'clock')}
-    <p class="hint" style="margin-top:0">الصق الجدول زي ما جالك، أو ابعت صورته لـ Claude في الشات. في مراجعة الجمعة هيقراه ويقترح الشيفتات وخطة الأسبوع.</p>
-    <form data-form="schedule-note" data-week="${weekKey}">
-      <textarea class="in" name="text" style="margin-top:12px" placeholder="مثلًا: السبت 4م-1ص، الحد 4م-1ص، الاتنين إجازة…">${esc(note?.text || '')}</textarea>
-      <div class="actions"><button class="btn btn-primary">احفظه لـ Claude</button></div>
-    </form></div>`;
+  const hasNote = !!db.data(`n:schedule:${keys[0]}`);
+  return `<div class="card" data-key="shifts">${ch('Shifts', 'briefcase', `<span class="ch-r">
+      <button class="ibtn ${hasNote ? 'on' : ''}" data-act="schedule-paste" data-week="${keys[0]}" aria-label="الصق جدول الشغل">${icon('copy', 17)}</button>
+      <button class="ibtn" data-act="shift-copy" data-k="${keys[0]}" aria-label="كرّر الأسبوع اللي فات">${icon('refresh', 17)}</button></span>`)}
+    <div class="tl">
+      <div class="tl-ticks" aria-hidden="true"><span style="inset-inline-start:0%">6ص</span><span style="inset-inline-start:25%">12م</span><span style="inset-inline-start:50%">6م</span><span style="inset-inline-start:75%">12ص</span></div>
+      ${rows}
+    </div></div>`;
 }
 
 function goalsCard(base) {
   const list = M.goals();
-  return `<div class="card" data-key="goals">${ch('Goals', 'target', `<button class="btn btn-sm" data-act="add-goal">${icon('plus', 16)} هدف</button>`)}
+  return `<div class="card" data-key="goals">${ch('Goals', 'target', `<button class="ibtn" data-act="add-goal" aria-label="هدف جديد">${icon('plus', 17)}</button>`)}
     ${list.length ? list.map((g) => {
       const p = M.goalProgress(g, base);
       const r = p.target ? p.value / p.target : 0;
       const gi = g.data.tracker === 'prayer' ? 'mosque' : (db.data(g.data.tracker)?.icon || 'target');
       return `<div class="goal" data-act="goal-edit" data-id="${g.id}" data-key="${g.id}" role="button" tabindex="0">
-        <div class="goal-r"><span class="gt">${icon(gi, 18)}${esc(g.data.title)}</span><span class="v">${Math.round(p.value)} / ${p.target} ${esc(p.unit)}</span></div>
-        ${bar(r, r >= 1 ? 'thick ok-bar' : 'thick')}
-        ${g.data.why ? `<p class="why">${esc(g.data.why)}</p>` : ''}</div>`;
-    }).join('') : empty('مفيش أهداف لسه. ضيف هدف واربطه بحاجة بتتابعها.', 'goals')}
+        <div class="goal-r"><span class="gt">${icon(gi, 18)}${esc(g.data.title)}</span><span class="v num">${Math.round(p.value)}/${p.target}</span></div>
+        ${bar(r, r >= 1 ? 'thick ok-bar' : 'thick')}</div>`;
+    }).join('') : empty('', 'goals')}
   </div>`;
 }
 
-function trackersCard(keys) {
-  const rows = M.trackers().filter((t) => !['money', 'streak'].includes(t.data.type)).map((t) => {
+// every habit × every day of the week as small squares: filled = done, faint = partly, outline = still to come
+function habitsCard(keys, k) {
+  const list = M.trackers().filter((t) => !['money', 'number'].includes(t.data.type));
+  const cell = (t, kk) => {
     const d = t.data;
-    const active = keys.filter((kk) => M.activeOn(t, kk));
-    let val = '';
-    if (d.type === 'check') {
-      const n = keys.filter((kk) => M.entry(t.id, kk) === 1).length;
-      val = `${n} / ${d.period === 'week' ? d.target : active.length} يوم`;
-    } else if (d.type === 'count' || d.type === 'duration') {
-      const sum = keys.reduce((s, kk) => s + (Number(M.entry(t.id, kk)) || 0), 0);
-      const tg = d.period === 'week' ? Number(d.target) : Number(d.target) * active.length;
-      val = d.type === 'duration' ? `${fmtMinutes(sum)} / ${fmtMinutes(tg)}` : `${sum} / ${tg || '—'} ${esc(d.unit || '')}`;
-    } else if (d.type === 'sleep') {
-      const hs = keys.map((kk) => M.sleepHours(M.entry(t.id, kk))).filter((h) => h != null);
-      val = hs.length ? `متوسط ${(hs.reduce((a, b) => a + b, 0) / hs.length).toFixed(1)} ساعة` : '—';
-    } else {
-      const vs = keys.map((kk) => M.entry(t.id, kk)).filter((v) => v != null).map(Number);
-      val = vs.length ? (d.auto === 'screen_time' ? `متوسط ${fmtMinutes(vs.reduce((a, b) => a + b, 0) / vs.length)}` : `متوسط ${(vs.reduce((a, b) => a + b, 0) / vs.length).toFixed(1)}`) : '—';
-    }
-    return `<tr><td>${icon(d.icon || 'diamond', 16)}${esc(d.name)}</td><td>${val}</td></tr>`;
-  }).join('');
-  return `<div class="card" data-key="stats">${ch('Stats', 'activity')}<table class="wk">${rows}</table></div>`;
+    if (kk > k) return '<i class="hc future"></i>';
+    if (d.period !== 'week' && !M.activeOn(t, kk)) return '<i class="hc rest"></i>';
+    const v = M.entry(t.id, kk);
+    if (d.type === 'check') return `<i class="hc ${v === 1 ? 'on' : ''}"></i>`;
+    if (d.type === 'streak') return `<i class="hc ${v === 1 ? 'slip' : kk >= (d.start || kk) ? 'on' : ''}"></i>`;
+    if (d.type === 'sleep') return `<i class="hc ${v && d.target && v.woke <= d.target ? 'on' : ''}" style="--r:${v ? 0.45 : 0}"></i>`;
+    const n = Number(v) || 0;
+    if (d.period === 'week') return `<i class="hc ${n > 0 ? 'on' : ''}"></i>`;
+    const tg = Number(d.target) || 0;
+    if (tg && n >= tg) return '<i class="hc on"></i>';
+    return `<i class="hc" style="--r:${tg ? Math.min(1, n / tg).toFixed(2) : 0}"></i>`;
+  };
+  const L = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
+  const head = keys.map((kk) => `<span class="${kk === k ? 'is-today' : ''}">${L[parseKey(kk).getDay()]}</span>`).join('');
+  return `<div class="card" data-key="hgrid">${ch('Habits', 'activity')}
+    <div class="hg">
+      <div class="hg-row hg-head"><span></span><span class="hg-cells">${head}</span></div>
+      ${list.map((t) => `<div class="hg-row" data-act="tracker-edit" data-id="${t.id}"><span class="hg-name">${icon(t.data.icon || 'diamond', 16)}<span>${esc(t.data.name)}</span></span>
+        <span class="hg-cells">${keys.map((kk) => cell(t, kk)).join('')}</span></div>`).join('')}
+    </div></div>`;
 }
 
-function moneyCard(keys) {
-  const money = M.trackers().filter((t) => t.data.type === 'money');
-  if (!money.length) return '';
-  const k = M.today();
-  const monthStart = `${k.slice(0, 8)}01`;
-  return money.map((t) => {
-    const list = M.expenses(t.id, keys[0], keys[6]);
-    return `<div class="card" data-key="m-${t.id}">${ch(esc(t.data.name), 'wallet', `<button class="btn btn-sm" data-act="add-expense" data-id="${t.id}">${icon('plus', 16)} سجّل</button>`, true)}
-      <div class="stats" style="margin-top:0">
-        <div class="stat"><b>${fmtMoney(M.expensesSum(t.id, keys[0], keys[6]))}</b><span>الأسبوع ده</span></div>
-        <div class="stat"><b>${fmtMoney(M.expensesSum(t.id, monthStart, k))}</b><span>الشهر ده</span></div>
-      </div>
-      ${list.slice(0, 8).map((e) => `<div class="exp"><span>${esc(e.data.category || e.data.note || '—')}${e.data.note && e.data.category ? ` · ${esc(e.data.note)}` : ''}</span>
-        <span><span class="amt">${fmtMoney(e.data.amount)}</span>
-        <button class="btn btn-ghost btn-sm" data-act="exp-del" data-id="${e.id}" aria-label="امسح">${icon('x', 16)}</button></span></div>`).join('')}
-    </div>`;
-  }).join('');
+function moneyCard(keys, k) {
+  const t = M.trackers().find((x) => x.data.type === 'money');
+  if (!t) return '';
+  const days = keys.map((kk) => M.expensesSum(t.id, kk, kk));
+  const max = Math.max(1, ...days);
+  const total = days.reduce((a, b) => a + b, 0);
+  return `<div class="card" data-key="money">${ch(esc(t.data.name), 'wallet', `<button class="ibtn" data-act="add-expense" data-id="${t.id}" aria-label="سجّل">${icon('plus', 17)}</button>`, true)}
+    <p class="money-total"><b class="num">${fmtMoney(total)}</b> ${esc(t.data.unit || 'ج')}</p>
+    <div class="mbars">${keys.map((kk, i) => `<span class="mb ${kk === k ? 'is-today' : ''}" title="${fmtMoney(days[i])}"><i style="height:${Math.round((days[i] / max) * 100)}%"></i><em>${['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'][parseKey(kk).getDay()]}</em></span>`).join('')}</div>
+  </div>`;
 }

@@ -23,6 +23,7 @@ export function header(title, sub = '', right = '', opts = {}) {
       <a class="mark" href="#today">بكرة ${dm3()}${DEMO ? '<span class="demo-pill">Demo</span>' : ''}</a>
       <div class="vh-tools">
         <a href="#settings" class="sync s-${st}" title="${SYNC_LABEL[st] || ''}" aria-label="${SYNC_LABEL[st] || ''}"><i></i></a>
+        <button class="ibtn" data-act="add" aria-label="Add">${icon('plus', 19)}</button>
         <a class="ibtn" href="#settings" aria-label="Settings">${icon('sliders', 19)}</a>
       </div>
     </div>
@@ -38,7 +39,7 @@ export const ch = (title, ic = '', right = '', ar = false) =>
   `<div class="card-h"><h2 class="${ar ? '' : 'en'}">${ic ? `<span class="hi">${icon(ic, 17)}</span>` : ''}${title}</h2>${right}</div>`;
 
 export const bar = (r, cls = '') => `<div class="bar ${cls}"><i style="width:${Math.round(Math.max(0, Math.min(1, r || 0)) * 100)}%"></i></div>`;
-export const empty = (msg, art = 'tasks') => `<div class="empty">${illus(art)}<p>${msg}</p></div>`;
+export const empty = (msg, art = 'tasks') => `<div class="empty">${illus(art)}${msg ? `<p>${msg}</p>` : ''}</div>`;
 
 export function chips(name, options, value, multi = false) {
   const vals = multi ? (value || []).map(String) : [String(value ?? '')];

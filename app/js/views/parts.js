@@ -2,8 +2,7 @@ import * as M from '../model.js';
 import * as db from '../db.js';
 import { burst, buzz } from '../ui.js';
 import { icon } from '../icons.js';
-import { esc, fmtHm, fmtMinutes, fmtMoney, relDay, pad } from '../util.js';
-import { isNative } from '../native.js';
+import { esc, fmtHm, fmtMoney, relDay, pad } from '../util.js';
 import { DEMO } from '../config.js';
 
 // ---------- task row ----------
@@ -88,15 +87,15 @@ export function habitRow(t, k) {
   switch (d.type) {
     case 'check': {
       const on = M.entry(t.id, k) === 1;
-      if (weekly) { ratio = p.ratio; meta = `<b>${p.value}</b> من ${p.target} الأسبوع ده${on ? ' · اتعمل النهارده' : ''}`; }
-      else { ratio = on ? 1 : 0; meta = on ? 'اتعمل النهارده' : (d.note ? esc(d.note) : 'لسه'); }
+      if (weekly) { ratio = p.ratio; meta = `<b>${p.value}</b>/${p.target}`; }
+      else { ratio = on ? 1 : 0; }
       act = `<button class="hbtn tick ${on ? 'on' : ''}" ${btnAttrs('trk-check', t, k)} aria-label="${on ? 'رجّعها' : 'تم'}">${icon('check', 20)}</button>`;
       break;
     }
     case 'count': {
       const val = Number(M.entry(t.id, k)) || 0;
       ratio = p.ratio;
-      meta = weekly ? `<b>${p.value}</b> من ${p.target} ${unit} الأسبوع ده` : `<b>${val}</b> من ${d.target || '—'} ${unit}`;
+      meta = weekly ? `<b>${p.value}</b>/${p.target} ${unit}` : `<b>${val}</b>/${d.target || '—'} ${unit}`;
       act = `<button class="hbtn" ${btnAttrs('trk-inc', t, k, 'data-n="-1"')} aria-label="ناقص واحد">${icon('minus', 18)}</button>
         <button class="hbtn primary" ${btnAttrs('trk-inc', t, k, 'data-n="1"')} aria-label="زوّد واحد">${icon('plus', 18)}</button>`;
       break;
@@ -105,9 +104,9 @@ export function habitRow(t, k) {
       const val = Number(M.entry(t.id, k)) || 0;
       const run = timerFor(t.id);
       ratio = p.ratio;
-      if (run) meta = `شغال <b class="num" data-timer="${t.id}">${elapsed(run)}</b>`;
-      else if (weekly) meta = `<b>${Math.round(p.value)}</b> من ${p.target} دقيقة الأسبوع ده`;
-      else meta = `<b>${val}</b> من ${d.target || '—'} دقيقة${d.note ? ` · ${esc(d.note)}` : ''}`;
+      if (run) meta = `${icon('timer', 14)}<b class="num" data-timer="${t.id}">${elapsed(run)}</b>`;
+      else if (weekly) meta = `<b>${Math.round(p.value)}</b>/${p.target} د`;
+      else meta = `<b>${val}</b>/${d.target || '—'} د`;
       act = run
         ? `<button class="hbtn primary" ${btnAttrs('timer-stop', t, k)} aria-label="وقّف التايمر">${icon('stop', 18)}</button>`
         : `<button class="hbtn txt" ${btnAttrs('trk-inc', t, k, 'data-n="10"')}>+10</button>
@@ -116,16 +115,15 @@ export function habitRow(t, k) {
     }
     case 'number': {
       const val = M.entry(t.id, k);
-      if (d.auto === 'screen_time') meta = val == null ? (isNative ? 'بيتحسب لوحده' : 'بيتحسب لوحده على الموبايل') : `<b>${(val / 60).toFixed(1)}</b> ساعة${d.target ? ` · الحد ${fmtMinutes(d.target)}` : ''}`;
-      else meta = val == null ? 'لسه' : `<b>${val}</b> ${unit}`;
+      if (d.auto === 'screen_time') meta = val == null ? '' : `<b>${(val / 60).toFixed(1)}</b> س`;
+      else meta = val == null ? '' : `<b>${val}</b> ${unit}`;
       if (d.target && val != null) ratio = Math.min(1, val / d.target);
       kind = d.lowerIsBetter && val != null && d.target && val > d.target ? 'gauge over' : 'gauge';
       act = `<button class="hbtn" ${btnAttrs('trk-number', t, k)} aria-label="سجّل">${icon('edit', 18)}</button>`;
       break;
     }
     case 'money': {
-      const wk = M.weekKeys(k);
-      meta = `<b>${fmtMoney(M.expensesSum(t.id, k, k))}</b> ${unit} النهارده · ${fmtMoney(M.expensesSum(t.id, wk[0], wk[6]))} الأسبوع ده`;
+      meta = `<b>${fmtMoney(M.expensesSum(t.id, k, k))}</b> ${unit}`;
       kind = 'gauge';
       act = `<button class="hbtn primary" data-act="add-expense" data-id="${t.id}" aria-label="سجّل">${icon('plus', 18)}</button>`;
       break;
@@ -133,7 +131,7 @@ export function habitRow(t, k) {
     case 'streak': {
       const days = M.streakDays(t, k);
       ratio = d.target ? Math.min(1, days / Number(d.target)) : 0;
-      meta = d.private ? `<span class="hide" data-act="reveal"><b>${days}</b> يوم</span> · محدش شايفه غيرك` : `<b>${days}</b> يوم · أطول مرة ${M.bestStreak(t, k)}`;
+      meta = d.private ? `<span class="hide" data-act="reveal"><b>${days}</b> يوم</span>` : `<b>${days}</b> يوم`;
       act = `<button class="hbtn txt" ${btnAttrs('trk-slip', t, k)}>وقعت</button>`;
       break;
     }
@@ -141,7 +139,7 @@ export function habitRow(t, k) {
       const e = M.entry(t.id, k);
       const h = M.sleepHours(e);
       ratio = h ? Math.min(1, h / 8) : 0;
-      meta = e ? `<b>${h}</b> ساعة · صحيت ${fmtHm(e.woke)}` : `هدف الصحيان ${fmtHm(d.target)}`;
+      meta = e ? `<b>${h}</b> س` : '';
       if (e && !isComplete(t, k)) kind = 'gauge';
       act = `<button class="hbtn" ${btnAttrs('trk-sleep', t, k)} aria-label="سجّل نومك">${icon('moon', 18)}</button>`;
       break;
@@ -157,8 +155,8 @@ export function habitRow(t, k) {
     <div class="hrow">
       <span class="hic" data-act="tracker-edit" data-id="${t.id}">${icon(done ? 'check' : d.icon || 'diamond', 20)}</span>
       <div class="hmain" data-act="tracker-edit" data-id="${t.id}">
-        <div class="hname"><span>${esc(d.name)}</span>${weekly ? '<span class="hwk">أسبوعي</span>' : ''}</div>
-        <div class="hmeta" data-anim>${meta}</div>
+        <div class="hname"><span>${esc(d.name)}</span>${weekly ? `<span class="hwk" title="أسبوعي">${icon('calendar', 13)}</span>` : ''}</div>
+        ${meta ? `<div class="hmeta" data-anim>${meta}</div>` : ''}
       </div>
       <div class="hact">${act}</div>
     </div>

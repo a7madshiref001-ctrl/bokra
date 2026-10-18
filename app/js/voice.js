@@ -32,15 +32,15 @@ export function open() {
       <div class="vmic"><span class="ring"></span><span class="ring r2"></span><span class="core">${icon('mic', 30)}</span></div>
       <div class="vbars" aria-hidden="true">${'<i></i>'.repeat(9)}</div>
       <p class="vstate" aria-live="polite"></p>
-      <textarea class="in" data-voice-text rows="4" placeholder="اللي هتقوله هيتكتب هنا، وتقدر تعدّل فيه…"></textarea>
+      <textarea class="in" data-voice-text rows="4" placeholder="«قريت صفحتين قرآن ولعبت رياضة»"></textarea>
       <div class="actions">
         <button class="btn" data-act="voice-toggle"></button>
         <button class="btn btn-primary" data-act="voice-save">${icon('check', 18)} احفظ لـ Claude</button>
       </div>
-      <p class="hint">قول اللي عملته أو اللي عايز تعمله، زي: «قريت صفحتين قرآن ولعبت رياضة»، أو «صرفت 120 جنيه أكل»، أو «فكّرني أكلم العيادة بكرة الساعة 5». Claude هيحط كل حاجة في مكانها.</p>
+
     </div>`, { onClose: stop });
   if (!canListen()) { setState('idle', 'المتصفح ده مش بيدعم التسجيل. اكتب، أو استخدم مايك الكيبورد.'); return; }
-  setState('idle', 'دوس ابدأ واتكلم');
+  setState('idle', '');
   start();
 }
 

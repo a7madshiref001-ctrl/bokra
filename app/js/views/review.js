@@ -22,11 +22,10 @@ export function render() {
   const pend = M.pendingSuggestions();
   const reps = M.reports();
   const latest = reps[0];
-  const sub = latest ? `آخر ${TYPE[latest.data.type]?.ar || 'مراجعة'} من Claude · ${when(latest.data.created_at)}` : 'Claude بيكتب هنا بعد ما يراجع يومك';
+  const sub = latest ? when(latest.data.created_at) : '';
   return `${header('Review', sub)}
-  ${pend.length ? `<div class="sec en">Suggestions <span class="meta">وافق بضغطة</span></div>${pend.map(suggCard).join('')}` : ''}
-  ${latest ? reportCard(latest) : `<div class="card" data-key="empty">${empty('لسه مفيش مراجعة. أول ما Claude يراجع، التقرير والمقترحات هيظهروا هنا.', 'review')}</div>`}
-  ${manualCard()}
+  ${pend.length ? `<div class="sec en">Suggestions <span class="count num">${pend.length}</span></div>${pend.map(suggCard).join('')}` : ''}
+  ${latest ? reportCard(latest) : `<div class="card" data-key="empty">${empty('أول مراجعة من Claude هتظهر هنا', 'review')}</div>`}
   ${reps.length > 1 ? `<div class="card" data-key="hist">${ch('History', 'clock')}${reps.slice(1, 15).map((r) => `<details class="old">
       <summary><span>${TYPE[r.data.type]?.ar || 'مراجعة'} · ${when(r.data.created_at)}</span>${icon('chevD', 16)}</summary>
       ${reportBody(r)}</details>`).join('')}</div>` : ''}`;
@@ -53,15 +52,6 @@ function reportBody(r) {
 function reportCard(r) {
   const t = TYPE[r.data.type] || TYPE.night;
   return `<div class="card" data-key="${r.id}"><p class="ov en" style="display:flex;align-items:center;gap:8px">${icon(t.ic, 16)}${t.en}</p>${reportBody(r)}</div>`;
-}
-
-function manualCard() {
-  return `<div class="card" data-key="manual">${ch('Manual review', 'copy')}
-    <p class="hint" style="margin-top:0">لو المراجعة التلقائية مش شغالة: انسخ بياناتك، ابعتها لـ Claude في أي شات، وبعدين الصق رده هنا.</p>
-    <div class="actions">
-      <button class="btn" data-act="copy-claude">${icon('copy', 18)} انسخ بياناتي</button>
-      <button class="btn" data-act="paste-claude">${icon('download', 18)} الصق رد Claude</button>
-    </div></div>`;
 }
 
 export function claudePrompt(type) {

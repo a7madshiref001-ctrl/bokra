@@ -65,8 +65,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Notifier.channels(this)
 
+        WebUpdate.resetIfApkChanged(this)
         val loader = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/assets/", WebUpdate.Handler(this))
             .build()
 
         web = WebView(this)
@@ -119,9 +120,13 @@ class MainActivity : ComponentActivity() {
         Scheduler.scheduleAll(this)
     }
 
+    @Volatile private var updateReady = false
+
     override fun onResume() {
         super.onResume()
         current = this
+        if (updateReady) { updateReady = false; web.reload() }
+        WebUpdate.check(this) { updateReady = true }
         web.evaluateJavascript("window.bokraResume && bokraResume()", null)
         BokraWidget.refresh(this)
     }
