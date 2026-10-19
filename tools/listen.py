@@ -9,6 +9,8 @@ Uses faster-whisper (pip install faster-whisper). The model lives on F: because 
 """
 import os
 import pathlib
+import shutil
+import subprocess
 import sys
 
 MODEL = os.environ.get("BOKRA_WHISPER_MODEL", "large-v3-turbo")
@@ -33,10 +35,21 @@ def model():
     return _model
 
 
+def load(path):
+    """Decode with ffmpeg (16 kHz mono float): works for the phone's webm/opus and doesn't depend on PyAV's version."""
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        return str(path)  # let faster-whisper decode it itself
+    import numpy as np
+    raw = subprocess.run([ff, "-nostdin", "-loglevel", "error", "-i", str(path), "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.float32)
+
+
 def transcribe(path):
     """Returns (text, seconds of audio)."""
     segments, info = model().transcribe(
-        str(path), language="ar", beam_size=5, vad_filter=True,
+        load(path), language="ar", beam_size=5, vad_filter=True,
         vad_parameters={"min_silence_duration_ms": 700}, initial_prompt=PROMPT, condition_on_previous_text=False,
     )
     text = " ".join(s.text.strip() for s in segments).strip()
