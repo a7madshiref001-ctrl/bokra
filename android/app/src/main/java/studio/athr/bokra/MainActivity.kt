@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.speech.RecognizerIntent
+import android.webkit.PermissionRequest
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -30,6 +31,14 @@ class MainActivity : ComponentActivity() {
     private val pickFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         fileCb?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
         fileCb = null
+    }
+
+    // the web app records voice notes itself (getUserMedia); Android only has to let the mic through
+    private var pendingMic: PermissionRequest? = null
+    private val micPerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        val r = pendingMic
+        pendingMic = null
+        if (ok) r?.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else r?.deny()
     }
 
     private val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -80,6 +89,7 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             textZoom = 100
             setSupportZoom(false)
+            mediaPlaybackRequiresUserGesture = false
             builtInZoomControls = false
             displayZoomControls = false
         }
@@ -99,6 +109,20 @@ class MainActivity : ComponentActivity() {
                 fileCb = cb
                 pickFile.launch("*/*")
                 return true
+            }
+
+            override fun onPermissionRequest(request: PermissionRequest) {
+                runOnUiThread {
+                    if (request.origin.host != "appassets.androidplatform.net" || PermissionRequest.RESOURCE_AUDIO_CAPTURE !in request.resources) {
+                        request.deny()
+                    } else if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                    } else {
+                        pendingMic?.deny()
+                        pendingMic = request
+                        micPerm.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                }
             }
         }
         web.addJavascriptInterface(Bridge(), "BokraNative")
@@ -125,11 +149,16 @@ class MainActivity : ComponentActivity() {
 
     @Volatile private var updateReady = false
 
+    /** New web files are in place: the page picks the moment to reload (not mid-recording or mid-typing). */
+    fun webUpdated() = runOnUiThread {
+        web.evaluateJavascript("window.bokraUpdateReady ? bokraUpdateReady() : false") { r -> if (r != "true") updateReady = true }
+    }
+
     override fun onResume() {
         super.onResume()
         current = this
         if (updateReady) { updateReady = false; web.reload() }
-        WebUpdate.check(this) { updateReady = true }
+        WebUpdate.check(this) { webUpdated() }
         web.evaluateJavascript("window.bokraResume && bokraResume()", null)
         BokraWidget.refresh(this)
     }
@@ -185,6 +214,10 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun openSettings(which: String) { runOnUiThread { c.openSettings(which) } }
         @JavascriptInterface fun testNotification() { Notifier.test(c) }
         @JavascriptInterface fun startVoice() { runOnUiThread { c.startVoice() } }
+        /** Present from the APK that lets the web app record real audio. */
+        @JavascriptInterface fun hasMic(): Boolean = true
+        @JavascriptInterface fun nativeVersion(): Int = BuildConfig.VERSION_CODE
+        @JavascriptInterface fun checkUpdate() { WebUpdate.check(c) { c.webUpdated() } }
 
         @JavascriptInterface fun share(json: String) {
             val j = try { JSONObject(json) } catch (e: Exception) { JSONObject() }

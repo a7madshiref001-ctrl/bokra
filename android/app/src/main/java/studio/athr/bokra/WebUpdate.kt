@@ -11,13 +11,14 @@ import java.net.URL
 import kotlin.concurrent.thread
 
 /**
- * The phone app updates its own screens: on launch it checks version.json on GitHub Pages,
- * downloads the new web files into the app's storage, and uses them from the next open.
+ * The phone app updates its own screens: every time it's opened (and every couple of minutes while open)
+ * it checks version.json on GitHub Pages, downloads the new web files into the app's storage,
+ * and tells the page, which reloads itself at a quiet moment.
  * Same origin as before, so nothing saved on the phone is lost. The bundled files stay as the fallback.
  */
 object WebUpdate {
     private const val BASE = "https://a7madshiref001-ctrl.github.io/bokra/"
-    private const val CHECK_EVERY = 60 * 60 * 1000L
+    private const val CHECK_EVERY = 20 * 1000L
 
     fun dir(c: Context) = File(c.filesDir, "www")
 

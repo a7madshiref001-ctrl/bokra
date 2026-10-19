@@ -42,6 +42,7 @@ const P = {
   bolt: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
   coffee: '<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 11h1a2 2 0 0 1 0 4h-1M8 3v3M12 3v3"/>',
   play: '<path d="M8 5l11 7-11 7z"/>',
+  pause: '<path d="M9 5v14M15 5v14"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   inbox: '<path d="M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5l1 2h4l1-2h5"/>',
   logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',

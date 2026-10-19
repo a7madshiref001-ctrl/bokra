@@ -5,6 +5,7 @@
   python tools/bokra.py pull [--days 14]  compact JSON of the last N days, for a review
   python tools/bokra.py push FILE.json    upload {"items":[...]} (reports, suggestions, notes)
   python tools/bokra.py apply FILE.json   apply {"ops":[...]} from voice/inbox notes (entries, prayers, expenses, tasks)
+  python tools/bokra.py voice            download voice notes Claude hasn't heard, transcribe them here (Whisper), write the text back
   python tools/bokra.py whoami            check the connection
   python tools/bokra.py login             one time: paste the anon key, type email + password (password is never saved)
 
@@ -26,6 +27,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 ENV = ROOT / ".env"
 SESSION = ROOT / ".bokra-session.json"
 PUSHABLE = {"report", "suggestion", "note"}
+BUCKET = "bokra-voice"
+VOICE_DIR = pathlib.Path("F:/bokra-voice") if pathlib.Path("F:/").exists() else ROOT / ".voice"
 PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
 
 try:
@@ -73,6 +76,12 @@ def http(method, url, headers, body=None, timeout=15):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         raw = r.read().decode("utf-8")
         return json.loads(raw) if raw else None
+
+
+def http_bytes(url, headers, timeout=60):
+    req = urllib.request.Request(url, method="GET", headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
 
 
 def save_session(j):
@@ -216,8 +225,13 @@ def summarize(rows, days):
         "tasks_open": [{"id": t["id"], "title": t["data"].get("title"), "date": t["data"].get("date"),
                         "time": t["data"].get("time"), "area": t["data"].get("area")}
                        for t in sorted(tasks, key=lambda t: (t["data"].get("date") or "9999")) if not t["data"].get("done")],
-        "inbox": [{"id": i["id"], "text": i["data"].get("text"), "source": i["data"].get("source", "text"), "at": i["data"].get("created_at")}
-                  for i in sorted(by_kind.get("inbox", []), key=by_created) if not i["data"].get("processed")],
+        # voice notes appear here once `voice` has transcribed them (text = what Whisper heard, may have mistakes)
+        "inbox": [{"id": i["id"], "text": i["data"].get("transcript") if i["data"].get("audio") else i["data"].get("text"),
+                   "source": i["data"].get("source", "text"), "at": i["data"].get("created_at"),
+                   **({"seconds": i["data"]["audio"].get("dur")} if i["data"].get("audio") else {})}
+                  for i in sorted(by_kind.get("inbox", []), key=by_created)
+                  if not i["data"].get("processed") and (not i["data"].get("audio") or i["data"].get("heard_at"))],
+        "voice_not_heard_yet": sum(1 for i in by_kind.get("inbox", []) if i["data"].get("audio") and not i["data"].get("heard_at") and not i["data"].get("processed")),
         "schedule_notes": [n["data"] for n in sorted(by_kind.get("note", []), key=by_created) if n["data"].get("type") == "schedule"][-2:],
         "recent_reports": [{"id": r["id"], **r["data"]} for r in sorted(by_kind.get("report", []), key=by_created, reverse=True)[:4]],
         "recent_suggestions": [{"id": x["id"], "title": x["data"].get("title"), "status": x["data"].get("status"), "action": x["data"].get("action")}
@@ -297,7 +311,8 @@ def cmd_apply(env, path):
     """Apply what he said in «دماغي» (voice or text) directly to his data. Ops:
     entry {tracker,date,value|add} · prayer {date,key,done} · sleep {tracker,date,slept,woke}
     expense {tracker,date,amount,category,note} · task {title,date,time,area} · task_done {id}
-    inbox_done {id,result}  (result = one Arabic line shown back to him)
+    inbox_done {id,result,clean?,notes?}  result = one Arabic line of what was applied (shown under the note);
+                                          clean = his words with Whisper's mistakes fixed; notes = 1-3 short observations
     """
     s = login(env)
     j = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
@@ -356,6 +371,10 @@ def cmd_apply(env, path):
         elif op == "inbox_done":
             cur = current.get(o["id"])
             data = {**(cur["data"] if cur else {}), "processed": True, "processed_at": now, "result": o.get("result", "")}
+            if o.get("clean"):
+                data["clean"] = o["clean"]
+            if o.get("notes"):
+                data["notes"] = [str(n) for n in (o["notes"] if isinstance(o["notes"], list) else [o["notes"]])][:4]
             put(o["id"], "inbox", data)
             log.append(f"inbox {o['id']} processed")
         else:
@@ -365,6 +384,38 @@ def cmd_apply(env, path):
         return
     http("POST", f"{url}/rest/v1/bokra_items?on_conflict=user_id,id", rest_headers(env, s, {"Prefer": "resolution=merge-duplicates,return=minimal"}), list(rows.values()))
     print(f"applied {len(rows)} changes: " + " | ".join(log))
+
+
+def cmd_voice(env):
+    """Voice notes are stored as audio. Download the ones not heard yet, transcribe them on this PC,
+    and save the text onto each note (the app then shows «Claude سمعه»). Prints what was heard as JSON."""
+    s = login(env)
+    url = env["SUPABASE_URL"].rstrip("/")
+    rows = fetch(env, s, "select=id,kind,data&kind=eq.inbox&deleted=is.false")
+    voice = [r for r in rows if r["data"].get("audio") and not r["data"].get("processed")]
+    todo = [r for r in voice if r["data"]["audio"].get("up") and r["data"]["audio"].get("path") and not r["data"].get("heard_at")]
+    not_up = sum(1 for r in voice if not r["data"]["audio"].get("up"))
+    if not todo:
+        print(json.dumps({"heard": [], "still_on_phone": not_up}, ensure_ascii=False))
+        return
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import listen
+    VOICE_DIR.mkdir(parents=True, exist_ok=True)
+    heard = []
+    for r in todo:
+        a = r["data"]["audio"]
+        local = VOICE_DIR / pathlib.Path(a["path"]).name
+        if not local.exists():
+            local.write_bytes(http_bytes(f"{url}/storage/v1/object/authenticated/{BUCKET}/{urllib.parse.quote(a['path'])}", rest_headers(env, s)))
+        t0 = time.time()
+        text, secs = listen.transcribe(local)
+        now = dt.datetime.now(dt.timezone.utc).isoformat()
+        row = {"id": r["id"], "user_id": s["user_id"], "kind": "inbox", "data": {**r["data"], "transcript": text, "heard_at": now}, "updated_at": now, "deleted": False}
+        s = login(env)  # long transcriptions can outlive the token
+        http("POST", f"{url}/rest/v1/bokra_items?on_conflict=user_id,id", rest_headers(env, s, {"Prefer": "resolution=merge-duplicates,return=minimal"}), [row])
+        heard.append({"id": r["id"], "at": r["data"].get("created_at"), "seconds": a.get("dur") or secs, "text": text, "took": round(time.time() - t0)})
+        print(f"heard {r['id']} ({a.get('dur') or secs}s in {round(time.time() - t0)}s)", file=sys.stderr)
+    print(json.dumps({"heard": heard, "still_on_phone": not_up}, ensure_ascii=False))
 
 
 def main():
@@ -395,6 +446,8 @@ def main():
             cmd_push(env, args[1])
         elif cmd == "apply":
             cmd_apply(env, args[1])
+        elif cmd == "voice":
+            cmd_voice(env)
         elif cmd == "whoami":
             s = login(env)
             print(f"ok: {s['email']} ({s['user_id']})")

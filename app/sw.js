@@ -1,9 +1,9 @@
 // Offline shell for the desktop / browser app. Supabase calls always go to the network.
-const VERSION = 'bokra-v1.8.0';
+const VERSION = 'bokra-v1.9.0';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/main.js', './js/db.js', './js/model.js', './js/sync.js', './js/prayer.js', './js/util.js', './js/icons.js',
-  './js/ui.js', './js/native.js', './js/sheets.js', './js/illus.js', './js/config.js', './js/voice.js', './js/demo.js',
+  './js/ui.js', './js/native.js', './js/sheets.js', './js/illus.js', './js/config.js', './js/voice.js', './js/audio.js', './js/live.js', './js/demo.js',
   './js/views/parts.js', './js/views/today.js', './js/views/habits.js', './js/views/week.js', './js/views/review.js', './js/views/settings.js',
   './icons/favicon.svg', './icons/icon-192.png', './icons/icon-512.png',
 ];
@@ -16,7 +16,7 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.hostname.endsWith('supabase.co')) return;
+  if (e.request.method !== 'GET' || url.hostname.endsWith('supabase.co') || url.pathname.endsWith('/version.json')) return;
   if (url.hostname.includes('fonts.g')) {
     // fonts: cache first
     e.respondWith(caches.open(VERSION).then(async (c) => {

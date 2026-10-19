@@ -86,12 +86,24 @@ async function refresh(s) {
   }
 }
 
-async function token() {
+export async function token() {
   let s = session();
   if (!s) return null;
   if (Date.now() / 1000 > (s.expires_at || 0) - 90) s = await refresh(s);
   return s;
 }
+
+// for Storage (voice recordings) and Realtime
+export async function storageAuth() {
+  const cfg = config();
+  const s = await token();
+  if (!cfg || !s) throw new Error('not signed in');
+  return { url: cfg.url, key: cfg.key, token: s.access_token, userId: s.user.id };
+}
+
+// work that has to happen before the rows go up (e.g. uploading voice recordings)
+const before = [];
+export const beforePush = (fn) => before.push(fn);
 
 async function rest(method, query, body, prefer) {
   const cfg = config();
@@ -151,6 +163,7 @@ export async function syncNow() {
   if (running) { again = true; return; }
   running = true; set('syncing');
   try {
+    for (const fn of before) { try { await fn(); } catch (e) { console.warn('before push', e); } }
     await push();
     await pull();
     set('ok', { at: new Date(), error: '' });

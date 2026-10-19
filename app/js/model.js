@@ -231,6 +231,14 @@ export function byTask(a, b) {
 // ---------- inbox (دماغي) ----------
 export const inbox = () => db.all('inbox').filter((i) => !i.data.processed).sort((a, b) => (b.data.created_at || '').localeCompare(a.data.created_at || ''));
 export function addInbox(text, source = 'text') { db.put('inbox', uid('i_'), { text, source, created_at: nowISO(), processed: false }); }
+// a recording: the audio itself (not text) goes to Claude, who writes the transcript and his notes back onto it
+export const newVoiceId = () => uid('i_');
+export function addVoice(id, audio) { db.put('inbox', id, { source: 'voice', audio: { ...audio, up: false }, created_at: nowISO(), processed: false }); }
+// local = only on this device · sent = uploaded, Claude hasn't listened yet · heard = transcribed · done = Claude applied it and wrote notes
+export const voiceStatus = (i) => (i.data.processed ? 'done' : i.data.heard_at ? 'heard' : i.data.audio?.up ? 'sent' : 'local');
+export const voiceNotes = (days = 7) => db.all('inbox')
+  .filter((i) => i.data.audio && (!i.data.processed || (!i.data.seen && Date.now() - new Date(i.data.processed_at || i.data.created_at) < days * 864e5)))
+  .sort((a, b) => (b.data.created_at || '').localeCompare(a.data.created_at || ''));
 // what Claude did with recent notes (shown back to you), newest first
 export const inboxDone = (hours = 48) => db.all('inbox')
   .filter((i) => i.data.processed && i.data.result && Date.now() - new Date(i.data.processed_at || i.data.created_at) < hours * 3600e3)
@@ -465,7 +473,7 @@ export function summaryForClaude(days = 14) {
     shifts_next: next7,
     top3_today: top3(k).map((t) => ({ id: t.id, title: t.data.title, done: !!t.data.done })),
     tasks_open: tasks().filter((t) => !t.data.done).sort(byTask).map((t) => ({ id: t.id, title: t.data.title, date: t.data.date, time: t.data.time, area: t.data.area })),
-    inbox: inbox().map((i) => ({ id: i.id, text: i.data.text, source: i.data.source || 'text', at: i.data.created_at })),
+    inbox: inbox().filter((i) => !i.data.audio || i.data.heard_at).map((i) => ({ id: i.id, text: i.data.text || i.data.transcript, source: i.data.source || 'text', at: i.data.created_at })),
     schedule_notes: db.all('note').filter((n) => n.data.type === 'schedule').slice(-2).map((n) => n.data),
     recent_reports: reports().slice(0, 4).map((r) => ({ id: r.id, ...r.data })),
     recent_suggestions: db.all('suggestion').sort((a, b) => (b.data.created_at || '').localeCompare(a.data.created_at || '')).slice(0, 15).map((s) => ({ id: s.id, title: s.data.title, status: s.data.status, action: s.data.action })),

@@ -3,7 +3,8 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-    paths: ['app/**', 'android/**', '.github/workflows/android.yml']
+    # screens (app/) reach the phone by themselves through WebUpdate; a new APK only when the Android side changes
+    paths: ['android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:

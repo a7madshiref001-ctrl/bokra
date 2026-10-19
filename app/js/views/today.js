@@ -5,6 +5,9 @@ import { icon } from '../icons.js';
 import { dayArc } from '../illus.js';
 import { fmtClock, fmtLongDate, fmtHijri, parseKey, fmtMinutes, fmtHm, esc, shiftKey } from '../util.js';
 import { taskRow } from './parts.js';
+import { playerState, fmtDur } from '../voice.js';
+import * as sync from '../sync.js';
+import { DEMO } from '../config.js';
 
 export function render() {
   const k = M.today();
@@ -39,15 +42,52 @@ function prayerCard(k) {
   </div>`;
 }
 
+// your recordings, and under each one what Claude heard, what he put where, and his notes
 function voiceCard() {
-  const done = M.inboxDone(12).filter((i) => !i.data.seen);
-  const pend = M.inbox().filter((i) => i.data.source === 'voice').length;
-  if (!done.length && !pend) return '';
-  return `<div class="card vcard" data-key="vcard">
-    ${done.slice(0, 2).map((i) => `<p class="va">${icon('sparkles', 15)}<span>${esc(i.data.result)}</span></p>`).join('')}
-    ${pend ? `<p class="va muted">${icon('mic', 15)}<span>${pend} مستني Claude</span></p>` : ''}
-    ${done.length ? `<button class="ibtn vx" data-act="voice-seen" aria-label="تمام">${icon('x', 15)}</button>` : ''}
+  const notes = M.voiceNotes();
+  const typed = M.inboxDone(12).filter((i) => !i.data.seen && !i.data.audio); // typed notes Claude already handled
+  if (!notes.length && !typed.length) return '';
+  const anyDone = typed.length || notes.some((n) => n.data.processed);
+  const right = anyDone ? `<button class="ibtn" data-act="voice-seen" aria-label="تمام، خبّي اللي خلص">${icon('check', 17)}</button>` : '';
+  return `<div class="card vcard" data-key="vcard">${ch('Voice', 'mic', right)}
+    ${notes.length ? `<ul class="vlist">${notes.slice(0, 6).map(voiceRow).join('')}</ul>` : ''}
+    ${typed.slice(0, 2).map((i) => `<p class="vres">${icon('sparkles', 15)}<span>${esc(i.data.result)}</span></p>`).join('')}
   </div>`;
+}
+
+function statusOf(i) {
+  const st = M.voiceStatus(i);
+  if (st === 'local') return DEMO ? ['local', 'Demo · من غير Claude'] : sync.isReady() ? ['up', 'بيتبعت…'] : ['local', 'مستني المزامنة'];
+  return { sent: ['wait', 'مستني Claude'], heard: ['wait', 'Claude بيحلله'], done: ['done', 'Claude خلّصه'] }[st];
+}
+
+function when(iso) {
+  const d = new Date(iso);
+  const k = M.logicalKey(d);
+  const t = M.today();
+  return `${k === t ? '' : k === shiftKey(t, -1) ? 'امبارح ' : `${fmtLongDate(parseKey(k))} `}${fmtClock(d)}`;
+}
+
+function voiceRow(i) {
+  const d = i.data;
+  const a = d.audio || {};
+  const ps = playerState(i.id);
+  const [cls, label] = statusOf(i);
+  const pk = a.peaks && a.peaks.length ? a.peaks : Array(40).fill(3);
+  const bars = pk.map((h) => `<i style="--h:${h}"></i>`).join('');
+  const said = d.clean || d.transcript;
+  return `<li class="vn st-${cls} ${ps.playing ? 'playing' : ''}" data-key="vn-${i.id}" data-vn="${i.id}">
+    <div class="vn-row">
+      <button class="vplay" data-act="voice-play" data-id="${i.id}" data-on="${ps.playing}" aria-label="اسمع">${icon(ps.playing ? 'pause' : 'play', 18)}</button>
+      <div class="vwave" style="--p:${ps.p.toFixed(4)}" aria-hidden="true"><span class="vw-b">${bars}</span><span class="vw-f">${bars}</span></div>
+      <span class="vdur num">${fmtDur(a.dur)}</span>
+    </div>
+    <div class="vn-meta"><span class="vst"><i></i>${label}</span><span class="vtime">${when(d.created_at)}</span>
+      <button class="ibtn vdel" data-act="voice-del" data-id="${i.id}" aria-label="امسح التسجيل">${icon('trash', 15)}</button></div>
+    ${d.result ? `<p class="vres">${icon('sparkles', 15)}<span>${esc(d.result)}</span></p>` : ''}
+    ${d.notes && d.notes.length ? `<ul class="vnotes">${d.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    ${said ? `<details class="vsaid"><summary>${icon('chevD', 14)}اللي قلته</summary><p>${esc(said)}</p></details>` : ''}
+  </li>`;
 }
 
 function top3Card(k) {
@@ -106,7 +146,7 @@ function laterCard(k) {
 }
 
 function inboxCard() {
-  const items = M.inbox();
+  const items = M.inbox().filter((i) => !i.data.audio); // recordings live in the Voice card
   if (!items.length) return '';
   return `<div class="card" data-key="inbox">${ch('Inbox', 'inbox', `<span class="count num">${items.length}</span>`)}
     <ul class="tl">${items.map((i) => `<li class="task" data-key="${i.id}">

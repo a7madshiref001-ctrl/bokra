@@ -10,6 +10,8 @@ import { SUPABASE_URL, DEMO } from './config.js';
 import { seedDemo } from './demo.js';
 import * as S from './sheets.js';
 import * as V from './voice.js';
+import * as audio from './audio.js';
+import * as live from './live.js';
 import { startTimer, stopTimer, timers, elapsed, isComplete, afterChange } from './views/parts.js';
 import { claudePrompt } from './views/review.js';
 import { LEVELS } from './views/settings.js';
@@ -179,9 +181,24 @@ const A = {
 
   pray: (el) => { buzz(18); burst(el); M.setPrayer(el.dataset.k, el.dataset.key, true); toast('تقبّل الله'); },
   voice: () => V.open(),
-  'voice-toggle': () => V.toggle(),
-  'voice-save': () => V.save(),
-  'voice-seen': () => M.inboxDone(12).forEach((i) => db.patch(i.id, { seen: true })),
+  'voice-done': () => V.done(),
+  'voice-cancel': () => V.cancel(),
+  'voice-type': () => V.toText(),
+  'voice-save-text': () => V.saveText(),
+  'voice-legacy': () => V.legacyListen(),
+  'voice-play': (el) => V.play(el.dataset.id),
+  'voice-del': (el) => {
+    if (!el.classList.contains('arm')) {
+      el.classList.add('arm'); toast('دوس تاني عشان تمسحه');
+      clearTimeout(el.armT); el.armT = setTimeout(() => el.classList.remove('arm'), 3000);
+      return;
+    }
+    V.remove(el.dataset.id); toast('اتمسح');
+  },
+  'voice-seen': () => {
+    M.voiceNotes().filter((i) => i.data.processed).forEach((i) => db.patch(i.id, { seen: true }));
+    M.inboxDone(12).forEach((i) => db.patch(i.id, { seen: true }));
+  },
   'pray-toggle': (el) => { buzz(); const { k, key } = el.dataset; M.setPrayer(k, key, !M.prayerDone(k, key)); },
 
   'task-toggle': (el) => { buzz(); M.toggleTask(el.dataset.id); },
@@ -395,7 +412,9 @@ async function boot() {
     $$('.sync').forEach((el) => { el.className = `sync s-${s.status}`; });
     if (current === 'settings' && s.status !== 'syncing') render();
   });
+  if (!DEMO) sync.beforePush(audio.uploadPending);
   sync.start();
+  live.start();
   pushNative();
   setInterval(() => {
     const ts = timers();
@@ -404,7 +423,10 @@ async function boot() {
   setInterval(() => { if (!sheetOpen()) render(); pushNative(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { drainNative(); render(); } });
   // let the intro finish (about 0.75s from page start), then fade it out
-  setTimeout(() => $('#splash')?.classList.add('gone'), Math.max(120, 750 - performance.now()));
+  // after a self-update reload, skip the intro and just say so
+  const updated = live.justUpdated();
+  setTimeout(() => $('#splash')?.classList.add('gone'), updated ? 0 : Math.max(120, 750 - performance.now()));
+  if (updated) setTimeout(() => toast('اتحدّث لآخر نسخة'), 500);
   enablePress();
   enablePullToSync();
   window.addEventListener('resize', moveTabIndicator);
