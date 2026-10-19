@@ -705,3 +705,9 @@ details.fold[open] > summary .ch-r .ic:last-child { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
   .main.enter *, .sheet, .sheet *, #splash * { animation: none !important; }
 }
+
+/* routine rows inside the tasks area */
+.task.routine .rt-ic { width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); flex-shrink: 0; }
+.cb.shift { border-style: solid; border-color: var(--line2); background: var(--raise); color: var(--text2); }
+.cb.shift .ic path { stroke-dasharray: none; stroke-dashoffset: 0; }
+.task.routine.done .cb.shift { background: var(--raise); border-color: var(--line2); color: var(--muted); }

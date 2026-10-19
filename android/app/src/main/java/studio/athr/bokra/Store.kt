@@ -79,6 +79,21 @@ object Store {
                 for (i in 0 until arr.length()) if (arr.optString(i) == key) has = true
                 if (!has) arr.put(key)
             }
+            "routine" -> {
+                val list = s.optJSONArray("routines") ?: return
+                for (i in 0 until list.length()) {
+                    val r = list.getJSONObject(i)
+                    if (r.optString("key") != a.optString("key")) continue
+                    val v = a.optInt("value")
+                    r.put("done", v > 0)
+                    r.put("value", v)
+                    when (r.optString("op")) {
+                        "toggle" -> r.put("next", if (v > 0) 0 else 1)
+                        "inc" -> r.put("next", v + 1)
+                        "complete" -> r.put("op", "open")
+                    }
+                }
+            }
             "task_done", "task_undone" -> {
                 val done = a.optString("type") == "task_done"
                 val t3 = s.optJSONArray("top3") ?: return

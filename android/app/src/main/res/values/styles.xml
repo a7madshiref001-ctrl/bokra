@@ -60,4 +60,12 @@
         <item name="android:textColor">#F7F5F2</item>
         <item name="android:textSize">14sp</item>
     </style>
+    <style name="WMeta">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#8E8983</item>
+        <item name="android:textSize">12sp</item>
+    </style>
 </resources>

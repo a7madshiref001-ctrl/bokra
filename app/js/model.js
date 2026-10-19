@@ -1,6 +1,6 @@
 // Domain logic: settings, prayers, trackers, tasks, goals, shifts, reports, suggestions.
 import * as db from './db.js';
-import { dkey, parseKey, addDays, shiftKey, daysBetween, uid, nowISO, hmToMin, pad } from './util.js';
+import { dkey, parseKey, addDays, shiftKey, daysBetween, uid, nowISO, hmToMin, pad, fmtHm } from './util.js';
 import { prayerTimes, PRAYERS } from './prayer.js';
 
 const SEED_TS = '2000-01-01T00:00:00.000Z';
@@ -333,7 +333,48 @@ export function nativeState() {
     today: k, dayStartHour: s.dayStartHour, lat: s.lat, lng: s.lng, fajrAngle: s.fajrAngle, ishaAngle: s.ishaAngle,
     lead: s.lead, level: s.level, sleepFrom: s.sleepFrom, sleepTo: s.sleepTo,
     prayed, top3: t3, reminders: buildReminders(k),
+    routines: routineItems(k).map((r) => ({
+      key: r.key, kind: r.kind, tracker: r.tracker || '', date: k, title: r.title, meta: r.metaText, done: r.done,
+      op: r.op, value: r.value, next: r.next,
+    })),
   };
+}
+
+// ---------- routine: today's recurring must-dos, shown with the tasks and in the routine widget ----------
+// Only things that need doing today: the work shift, and check / count / time habits that aren't private.
+// op tells a tap what to do: toggle (yes/no), complete (fill to target), inc (+1 toward a weekly target), open.
+export function routineItems(k) {
+  const items = [];
+  const now = Date.now();
+  const sh = shift(k);
+  if (sh && !sh.off && sh.start) {
+    const ended = sh.end ? atTime(k, sh.end) + (hmToMin(sh.end) <= hmToMin(sh.start) ? 864e5 : 0) < now : false;
+    items.push({ key: `sh:${k}`, kind: 'shift', title: 'الشغل', time: sh.start, end: sh.end, done: ended, op: 'open', metaText: `${fmtHm(sh.start)} – ${fmtHm(sh.end)}` });
+  }
+  trackers().forEach((t) => {
+    const d = t.data;
+    if (d.private || !['check', 'count', 'duration'].includes(d.type)) return;
+    const weekly = d.period === 'week';
+    if (!weekly && !activeOn(t, k)) return;
+    const val = Number(entry(t.id, k)) || 0;
+    const tg = Number(d.target) || (d.type === 'check' ? 1 : 0);
+    const p = progress(t, k);
+    let done; let op; let next; let metaText;
+    if (d.type === 'check') {
+      done = val === 1; op = 'toggle'; next = done ? 0 : 1;
+      metaText = weekly ? `${p.value}/${p.target}` : '';
+    } else if (weekly) {
+      if (p.ratio >= 1 && !val) return; // this week's target is already reached
+      done = val > 0; op = d.type === 'count' ? 'inc' : 'open'; next = val + 1;
+      metaText = `${p.value}/${p.target}${d.unit ? ` ${d.unit}` : ''}`;
+    } else {
+      done = tg ? val >= tg : val > 0; op = done ? 'open' : 'complete'; next = tg;
+      metaText = d.type === 'duration' ? `${val}/${tg} د` : `${val}/${tg}${d.unit ? ` ${d.unit}` : ''}`;
+    }
+    items.push({ key: t.id, kind: 'tracker', tracker: t.id, type: d.type, icon: d.icon, title: d.name, time: d.remind || null, weekly, done, op, value: val, next, metaText, order: d.order ?? 0 });
+  });
+  const tm = (x) => (x.time ? hmToMin(x.time) : 2000);
+  return items.sort((a, b) => (a.done - b.done) || (tm(a) - tm(b)) || ((a.order ?? -1) - (b.order ?? -1)));
 }
 
 function buildReminders(k) {
@@ -385,6 +426,7 @@ export function applyNativeActions(list) {
         break;
       }
       case 'tracker_done': setEntry(a.tracker, a.date, 1); break;
+      case 'routine': if (a.tracker) setEntry(a.tracker, a.date, Number(a.value) || 0); break;
       default: break;
     }
   });

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:layoutDirection="rtl"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:id="@+id/rw_head"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:text="Routine"
+            android:textColor="#F7F5F2"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rw_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#8E8983"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/line" />
+
+    <LinearLayout android:id="@+id/rw_r0" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c0" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t0" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m0" style="@style/WMeta" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw_r1" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c1" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t1" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m1" style="@style/WMeta" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw_r2" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c2" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t2" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m2" style="@style/WMeta" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw_r3" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c3" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t3" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m3" style="@style/WMeta" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw_r4" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c4" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t4" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m4" style="@style/WMeta" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/rw_r5" style="@style/WRow">
+        <ImageView android:id="@+id/rw_c5" style="@style/WCb" />
+        <TextView android:id="@+id/rw_t5" style="@style/WTask" />
+        <TextView android:id="@+id/rw_m5" style="@style/WMeta" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/rw_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="start"
+        android:text="مفيش روتين النهارده"
+        android:textColor="#C4BFB8"
+        android:textSize="14sp"
+        android:visibility="gone" />
+</LinearLayout>

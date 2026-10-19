@@ -14,7 +14,7 @@ export function render() {
   return `${header('Today', `${fmtLongDate(d)} · ${fmtHijri(d)}`, chip)}
   <div class="today-grid">
     <section class="a-pray">${prayerCard(k)}${voiceCard()}</section>
-    <section class="a-tasks">${top3Card(k)}${tasksCard(k)}${inboxCard()}${laterCard(k)}</section>
+    <section class="a-tasks">${top3Card(k)}${routineCard(k)}${tasksCard(k)}${inboxCard()}${laterCard(k)}</section>
   </div>`;
 }
 
@@ -57,6 +57,24 @@ function top3Card(k) {
   return `<div class="card" data-key="top3">${ch('Top 3', 'diamond', right)}
     ${list.length ? `<ul class="tl">${list.map((t) => taskRow(t, k)).join('')}</ul>` : empty('', 'top3')}
   </div>`;
+}
+
+// today's recurring must-dos: Quran, study, the work shift…; done ones sink to the bottom
+function routineCard(k) {
+  const list = M.routineItems(k);
+  if (!list.length) return '';
+  const done = list.filter((r) => r.done).length;
+  const row = (r) => {
+    const box = r.kind === 'shift'
+      ? `<button class="cb shift" data-act="routine-open" data-key="${r.key}" data-k="${k}" aria-label="الشيفت">${icon('briefcase', 15)}</button>`
+      : `<button class="cb" data-act="routine-tap" data-key="${r.key}" data-k="${k}" aria-label="${r.done ? 'اتعمل' : 'تم'}">${icon('check', 16)}</button>`;
+    const meta = [r.metaText ? `<span class="tag num">${esc(r.metaText)}</span>` : '', r.time && r.kind !== 'shift' ? `<span class="tag">${icon('bell', 14)}${fmtHm(r.time)}</span>` : ''].join('');
+    return `<li class="task routine ${r.done ? 'done' : ''}" data-key="r-${r.key}">${box}
+      <div class="t-main" data-act="routine-open" data-key="${r.key}" data-k="${k}"><div class="t-title">${esc(r.title)}</div>${meta ? `<div class="t-meta">${meta}</div>` : ''}</div>
+      <span class="rt-ic">${icon(r.kind === 'shift' ? 'clock' : r.icon || 'refresh', 16)}</span></li>`;
+  };
+  return `<div class="card" data-key="routine">${ch('Routine', 'refresh', `<span class="count num">${done}/${list.length}</span>`)}
+    <ul class="tl">${list.map(row).join('')}</ul></div>`;
 }
 
 function tasksCard(k) {

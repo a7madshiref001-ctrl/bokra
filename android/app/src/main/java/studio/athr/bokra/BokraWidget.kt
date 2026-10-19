@@ -25,6 +25,7 @@ class BokraWidget : AppWidgetProvider() {
         private val TITLES = intArrayOf(R.id.w_t0, R.id.w_t1, R.id.w_t2)
 
         fun refresh(c: Context) {
+            BokraRoutineWidget.refresh(c)
             val mgr = AppWidgetManager.getInstance(c)
             val ids = mgr.getAppWidgetIds(ComponentName(c, BokraWidget::class.java))
             if (ids.isEmpty()) return

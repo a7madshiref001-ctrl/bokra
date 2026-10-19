@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_desc">الصلاة الجاية وأهم 3 مهام</string>
+    <string name="widget_routine_name">الروتين</string>
+    <string name="widget_routine_desc">روتين النهارده: الورد، المذاكرة، الشغل…</string>
 </resources>

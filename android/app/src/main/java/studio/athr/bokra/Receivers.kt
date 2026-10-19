@@ -49,6 +49,7 @@ class ActionReceiver : BroadcastReceiver() {
         const val TASK_TOGGLE = "studio.athr.bokra.TASK_TOGGLE"
         const val TASK_POSTPONE = "studio.athr.bokra.TASK_POSTPONE"
         const val TRACKER_DONE = "studio.athr.bokra.TRACKER_DONE"
+        const val ROUTINE = "studio.athr.bokra.ROUTINE"
     }
 
     override fun onReceive(c: Context, intent: Intent) {
@@ -90,6 +91,13 @@ class ActionReceiver : BroadcastReceiver() {
                     items.add(item)
                 }
                 Notifier.cancel(c, intent.getIntExtra("nid", 0))
+            }
+            ROUTINE -> {
+                val tracker = intent.getStringExtra("tracker") ?: return
+                val date = intent.getStringExtra("date") ?: return
+                val value = intent.getIntExtra("value", 1)
+                Store.addAction(c, JSONObject().put("type", "routine").put("tracker", tracker).put("date", date).put("value", value).put("key", intent.getStringExtra("key") ?: tracker))
+                items.add(JSONObject().put("id", "e:$tracker:$date").put("kind", "entry").put("data", JSONObject().put("tracker", tracker).put("date", date).put("value", value)))
             }
             TRACKER_DONE -> {
                 val item = parse(intent.getStringExtra("item")) ?: return

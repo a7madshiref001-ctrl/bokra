@@ -204,6 +204,23 @@ const A = {
   'trk-sleep': (el) => S.sleepForm(el.dataset.id, el.dataset.k),
   'trk-slip': (el) => S.slipConfirm(el.dataset.id, el.dataset.k),
   'slip-yes': (el) => { M.setEntry(el.dataset.id, el.dataset.k, 1); closeSheet(); toast('اتسجّل. العداد بدأ من النهارده'); },
+  'routine-tap': (el) => {
+    const { key, k } = el.dataset;
+    const r = M.routineItems(k).find((x) => x.key === key);
+    if (!r) return;
+    if (r.op === 'open') { A['routine-open'](el); return; }
+    buzz();
+    const was = isComplete(db.get(r.tracker), k);
+    M.setEntry(r.tracker, k, r.next);
+    if (r.op === 'inc') floatText(el, '+1');
+    afterChange(r.tracker, k, was);
+  },
+  'routine-open': (el) => {
+    const { key, k } = el.dataset;
+    if (key.startsWith('sh:')) { S.shiftForm(k); return; }
+    const t = db.get(key);
+    if (t && (t.data.type === 'count' || t.data.type === 'duration')) S.numberForm(key, k); else S.trackerForm(key);
+  },
   'timer-start': (el) => { startTimer(el.dataset.id, el.dataset.k); render(); },
   'timer-stop': (el) => {
     const r = stopTimer(el.dataset.id);
