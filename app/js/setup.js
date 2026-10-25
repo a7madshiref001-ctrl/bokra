@@ -12,9 +12,9 @@ const STEPS = [
   { k: 'mic', ic: 'mic', t: 'Microphone', ar: 'المايك', d: 'تسجّل صوتك من التطبيق ومن زرار الشاشة الرئيسية.' },
   {
     k: 'guard', ic: 'lock', t: 'Social lock', ar: 'قفل السوشيال', d: 'الفيد والريلز والشورتس بتتقفل. الرسايل بتفضل شغالة.',
+    // Realme hides «Allow restricted settings»: it's done once from the PC (adb, with «Disable permission monitoring» on)
     help: `شغّل BOKRA من <b class="en">Downloaded apps</b>.<br>
-      لو ظهرلك <b class="en">Restricted setting</b>: دوس <b class="en">App info</b> هنا، ومنها النقط التلاتة فوق، وبعدين <b class="en">Allow restricted settings</b>.`,
-    extra: { k: 'app', label: 'App info' },
+      لو ظهرلك <b class="en">Restricted setting</b>: Realme مخبّي خيار السماح، فده بيتعمل مرة واحدة من الكمبيوتر. قول لـ Claude «فعّل قفل السوشيال».`,
   },
   { k: 'battery', ic: 'bolt', t: 'Battery', ar: 'البطارية', d: 'عشان Realme ميقفلش BOKRA وهو شغال في الخلفية.' },
   { k: 'usage', ic: 'phone', t: 'Screen time', ar: 'وقت الموبايل', d: 'عشان يحسب وقتك على الموبايل كل يوم.', help: 'دوّر على BOKRA وشغّله.' },
