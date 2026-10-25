@@ -7,14 +7,21 @@
   python tools/bokra.py apply FILE.json   apply {"ops":[...]} from voice/inbox notes (entries, prayers, expenses, tasks)
   python tools/bokra.py voice            download voice notes Claude hasn't heard, transcribe them here (Whisper), write the text back
   python tools/bokra.py whoami            check the connection
+  python tools/bokra.py pending           how many «دماغي» notes are still waiting
+  python tools/bokra.py brain-start|brain-done   the cloud brain's lock (exit 3 = another run has it)
   python tools/bokra.py login             one time: paste the anon key, type email + password (password is never saved)
 
 Reads bokra/.env (SUPABASE_URL, SUPABASE_ANON_KEY; BOKRA_EMAIL/BOKRA_PASSWORD optional)
 and keeps a renewable session in bokra/.bokra-session.json.
+
+In Claude's cloud (BOKRA_CLOUD=1, see cloud/README.md) there is no login: the cloud environment's network secrets
+add the Supabase secret key (apikey) and the ElevenLabs key (xi-api-key) to requests on their way out, so no key
+is ever in a file or in the session. BOKRA_USER_ID says whose rows these are. Voice is transcribed by ElevenLabs there.
 """
 import datetime as dt
 import getpass
 import json
+import os
 import pathlib
 import secrets
 import sys
@@ -28,6 +35,8 @@ ENV = ROOT / ".env"
 SESSION = ROOT / ".bokra-session.json"
 PUSHABLE = {"report", "suggestion", "note"}
 BUCKET = "bokra-voice"
+CLOUD = os.environ.get("BOKRA_CLOUD") == "1"
+DEFAULT_URL = "https://mjadsoyufdddbqezgrcy.supabase.co"
 VOICE_DIR = pathlib.Path("F:/bokra-voice") if pathlib.Path("F:/").exists() else ROOT / ".voice"
 PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
 
@@ -38,6 +47,8 @@ except Exception:
 
 
 def load_env():
+    if CLOUD:
+        return {"SUPABASE_URL": os.environ.get("SUPABASE_URL", DEFAULT_URL), "BOKRA_USER_ID": os.environ.get("BOKRA_USER_ID", "")}
     env = {}
     if not ENV.exists():
         return env
@@ -51,6 +62,8 @@ def load_env():
 
 
 def configured(env):
+    if CLOUD:
+        return bool(env.get("BOKRA_USER_ID"))
     if not (env.get("SUPABASE_URL") and env.get("SUPABASE_ANON_KEY")):
         return False
     return SESSION.exists() or bool(env.get("BOKRA_EMAIL") and env.get("BOKRA_PASSWORD"))
@@ -93,6 +106,8 @@ def save_session(j):
 
 
 def login(env, timeout=15):
+    if CLOUD:  # nothing to sign in to: the key travels as a network secret
+        return {"access_token": None, "user_id": env["BOKRA_USER_ID"], "email": "cloud"}
     url = env["SUPABASE_URL"].rstrip("/")
     headers = {"apikey": env["SUPABASE_ANON_KEY"], "Content-Type": "application/json"}
     s = None
@@ -130,6 +145,10 @@ def cmd_login(env):
 
 
 def rest_headers(env, s, extra=None):
+    if CLOUD:  # the agent proxy adds the apikey header (the project's secret key) after the request leaves the VM
+        h = {"Content-Type": "application/json"}
+        h.update(extra or {})
+        return h
     h = {"apikey": env["SUPABASE_ANON_KEY"], "Authorization": f"Bearer {s['access_token']}", "Content-Type": "application/json"}
     h.update(extra or {})
     return h
@@ -137,6 +156,8 @@ def rest_headers(env, s, extra=None):
 
 def fetch(env, s, query, timeout=20):
     url = env["SUPABASE_URL"].rstrip("/")
+    if CLOUD:  # the secret key sees every row, so ask for his only
+        query += f"&user_id=eq.{s['user_id']}"
     out, offset = [], 0
     while True:
         rows = http("GET", f"{url}/rest/v1/bokra_items?{query}&order=synced_at.asc&limit=1000&offset={offset}", rest_headers(env, s), timeout=timeout)
@@ -398,8 +419,9 @@ def cmd_voice(env):
     if not todo:
         print(json.dumps({"heard": [], "still_on_phone": not_up}, ensure_ascii=False))
         return
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-    import listen
+    if not CLOUD:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import listen
     VOICE_DIR.mkdir(parents=True, exist_ok=True)
     heard = []
     for r in todo:
@@ -408,7 +430,7 @@ def cmd_voice(env):
         if not local.exists():
             local.write_bytes(http_bytes(f"{url}/storage/v1/object/authenticated/{BUCKET}/{urllib.parse.quote(a['path'])}", rest_headers(env, s)))
         t0 = time.time()
-        text, secs = listen.transcribe(local)
+        text, secs = transcribe_eleven(local, a.get("dur")) if (CLOUD or os.environ.get("BOKRA_STT") == "elevenlabs") else listen.transcribe(local)
         now = dt.datetime.now(dt.timezone.utc).isoformat()
         row = {"id": r["id"], "user_id": s["user_id"], "kind": "inbox", "data": {**r["data"], "transcript": text, "heard_at": now}, "updated_at": now, "deleted": False}
         s = login(env)  # long transcriptions can outlive the token
@@ -416,6 +438,49 @@ def cmd_voice(env):
         heard.append({"id": r["id"], "at": r["data"].get("created_at"), "seconds": a.get("dur") or secs, "text": text, "took": round(time.time() - t0)})
         print(f"heard {r['id']} ({a.get('dur') or secs}s in {round(time.time() - t0)}s)", file=sys.stderr)
     print(json.dumps({"heard": heard, "still_on_phone": not_up}, ensure_ascii=False))
+
+
+LOCK_MINUTES = 20  # a run that hasn't let go after this long is considered dead
+
+
+def cmd_brain(env, what):
+    """The cloud brain's lock (table bokra_brain, one row), so two runs never apply the same note twice.
+    Supabase takes it when it fires the inbox task (cloud/brain.sql); a scheduled run takes it with `brain-start`.
+    `brain-done` lets go. `pending` = how many notes are still waiting (voice not heard yet counts)."""
+    url = env["SUPABASE_URL"].rstrip("/")
+    s = login(env)
+    now = dt.datetime.now(dt.timezone.utc)
+    if what == "start":
+        stale = (now - dt.timedelta(minutes=LOCK_MINUTES)).isoformat()
+        q = f"id=eq.1&or=(running_since.is.null,running_since.lt.{urllib.parse.quote(stale)})"
+        got = http("PATCH", f"{url}/rest/v1/bokra_brain?{q}", rest_headers(env, s, {"Prefer": "return=representation"}), {"running_since": now.isoformat()})
+        if not got:
+            print("busy: another run is working on the notes")
+            sys.exit(3)
+        print("ok: lock taken")
+    elif what == "done":
+        http("PATCH", f"{url}/rest/v1/bokra_brain?id=eq.1", rest_headers(env, s, {"Prefer": "return=minimal"}), {"running_since": None})
+        print("ok: lock released")
+    else:
+        rows = fetch(env, s, "select=id,data&kind=eq.inbox&deleted=is.false")
+        print(sum(1 for r in rows if not r["data"].get("processed")))
+
+
+def transcribe_eleven(path, dur=None):
+    """ElevenLabs Scribe, for the cloud (no Whisper model there). Good with Egyptian Arabic.
+    In the cloud the key is added by the network secret; on the PC it comes from ELEVENLABS_API_KEY."""
+    b = secrets.token_hex(16)
+    nl = chr(13) + chr(10)  # multipart lines end in CRLF
+    head = "".join(f'--{b}{nl}Content-Disposition: form-data; name="{k}"{nl}{nl}{v}{nl}' for k, v in (("model_id", "scribe_v1"), ("language_code", "ara")))
+    head += f'--{b}{nl}Content-Disposition: form-data; name="file"; filename="{path.name}"{nl}Content-Type: application/octet-stream{nl}{nl}'
+    body = head.encode() + path.read_bytes() + f"{nl}--{b}--{nl}".encode()
+    h = {"Content-Type": f"multipart/form-data; boundary={b}"}
+    if not CLOUD and os.environ.get("ELEVENLABS_API_KEY"):
+        h["xi-api-key"] = os.environ["ELEVENLABS_API_KEY"]
+    req = urllib.request.Request("https://api.elevenlabs.io/v1/speech-to-text", data=body, method="POST", headers=h)
+    with urllib.request.urlopen(req, timeout=300) as r:
+        j = json.loads(r.read().decode("utf-8"))
+    return (j.get("text") or "").strip(), dur or 0
 
 
 def main():
@@ -436,7 +501,7 @@ def main():
             sys.exit(1)
         return
     if not configured(env):
-        print("BOKRA مش متوصل: شغّل مرة واحدة: python C:/Users/Ahmed/bokra/tools/bokra.py login")
+        print("BOKRA cloud: BOKRA_USER_ID is missing in the environment" if CLOUD else "BOKRA مش متوصل: شغّل مرة واحدة: python C:/Users/Ahmed/bokra/tools/bokra.py login")
         sys.exit(2)
     try:
         if cmd == "pull":
@@ -448,6 +513,8 @@ def main():
             cmd_apply(env, args[1])
         elif cmd == "voice":
             cmd_voice(env)
+        elif cmd in ("brain-start", "brain-done", "pending"):
+            cmd_brain(env, cmd.split("-")[-1])
         elif cmd == "whoami":
             s = login(env)
             print(f"ok: {s['email']} ({s['user_id']})")
