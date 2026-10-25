@@ -81,6 +81,7 @@ class RecorderService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Guard.heal(this)
         // every startForegroundService has to be answered with startForeground, even the tap that stops
         if (!foreground()) { stopSelf(); return START_NOT_STICKY }
         if (rec == null) start() else stop(save = true)

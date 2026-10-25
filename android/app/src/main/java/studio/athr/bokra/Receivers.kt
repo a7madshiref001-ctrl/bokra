@@ -8,6 +8,7 @@ import kotlin.concurrent.thread
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
+        Guard.heal(c) // every alarm (prayers, reminders, the day rollover) puts the social lock back if it was turned off
         val s = Store.state(c)
         val level = Store.level(s)
         val date = intent.getStringExtra("date") ?: ""
@@ -36,6 +37,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
+        Guard.heal(c)
         Notifier.channels(c)
         Scheduler.scheduleAll(c)
         BokraWidget.refresh(c)

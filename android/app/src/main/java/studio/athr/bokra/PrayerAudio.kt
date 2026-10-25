@@ -71,6 +71,7 @@ class PrayerAudio : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Guard.heal(this)
         if (player != null || focus != null) end(repost = true, stop = false) // a new sound replaces whatever was still playing
         kind = intent?.getIntExtra("kind", ADHAN) ?: ADHAN
         date = intent?.getStringExtra("date") ?: Prayer.todayKey(Store.dayStart(Store.state(this)))

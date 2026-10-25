@@ -16,6 +16,7 @@ import android.widget.RemoteViews
  */
 class RecordWidget : AppWidgetProvider() {
     override fun onUpdate(c: Context, mgr: AppWidgetManager, ids: IntArray) {
+        Guard.heal(c)
         val v = build(c)
         ids.forEach { mgr.updateAppWidget(it, v) }
     }

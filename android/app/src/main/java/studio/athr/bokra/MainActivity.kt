@@ -163,6 +163,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Guard.heal(this) // before the page checks permissions, so the setup screen doesn't ask for nothing
         current = this
         if (updateReady) { updateReady = false; web.reload() }
         WebUpdate.check(this) { webUpdated() }

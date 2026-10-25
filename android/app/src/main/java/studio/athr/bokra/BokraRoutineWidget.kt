@@ -15,6 +15,7 @@ import org.json.JSONArray
 /** Second home-screen widget: today's routine (Quran, study, the shift…). Tap a row to tick it. */
 class BokraRoutineWidget : AppWidgetProvider() {
     override fun onUpdate(c: Context, mgr: AppWidgetManager, ids: IntArray) {
+        Guard.heal(c)
         val v = build(c)
         ids.forEach { mgr.updateAppWidget(it, v) }
     }

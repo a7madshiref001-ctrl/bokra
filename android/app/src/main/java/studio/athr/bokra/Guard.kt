@@ -3,6 +3,7 @@ package studio.athr.bokra
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -55,6 +56,28 @@ class Guard : AccessibilityService() {
             val on = Settings.Secure.getString(c.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
             val me = ComponentName(c, Guard::class.java)
             return on.split(':').any { ComponentName.unflattenFromString(it) == me }
+        }
+
+        /**
+         * Realme force-stops apps (clearing recents, its battery manager), and Android turns a force-stopped app's
+         * accessibility service off with it. With WRITE_SECURE_SETTINGS (granted once from the PC with adb),
+         * BOKRA turns the lock back on by itself whenever it runs: opened, a prayer alarm, the widgets.
+         */
+        fun heal(c: Context): Boolean {
+            if (BuildConfig.DEMO) return false
+            if (enabled(c)) return true
+            if (c.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") != PackageManager.PERMISSION_GRANTED) return false
+            return try {
+                val me = ComponentName(c, Guard::class.java)
+                val cr = c.contentResolver
+                val others = (Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: "")
+                    .split(':').filter { it.isNotBlank() && ComponentName.unflattenFromString(it) != me }
+                Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, (others + me.flattenToString()).joinToString(":"))
+                Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
+                true
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 
