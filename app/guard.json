@@ -1,0 +1,56 @@
+{
+  "_": "Social lock rules, read by the phone's Guard service. Updates with the web app (no new APK). ids = the apps' own view ids, without 'pkg:id/'. Instagram's were checked on 191 real screens (IG 410 + 447): every DM screen stays open, every feed / reel / story / explore screen closes.",
+  "v": 1,
+  "apps": {
+    "com.instagram.android": {
+      "name": "Instagram",
+      "mode": "screens",
+      "allow": ["direct_thread_header", "direct_thread_content_below_action_bar", "row_thread_composer_edittext", "direct_inbox_action_bar", "inbox_refreshable_thread_list_recyclerview", "direct_recipient_picker_action_bar", "direct_new_chat_to_field"],
+      "block": ["clips_viewer_view_pager", "clips_viewer_container", "root_clips_layout", "reel_viewer_root", "reel_viewer_media_container", "row_feed_profile_header", "row_feed_photo_profile_name", "row_feed_view_group_buttons", "row_feed_button_like", "reels_tray_container", "main_feed_action_bar", "explore_action_bar", "search_tab_bar_layout"],
+      "tabs": ["feed_tab", "search_tab", "clips_tab"],
+      "tabIcon": "tab_icon",
+      "tabBar": ["tab_bar"],
+      "messages": ["direct_tab", "action_bar_inbox_button"],
+      "say": "Instagram · الرسايل بس"
+    },
+    "com.google.android.youtube": {
+      "name": "YouTube",
+      "mode": "screens",
+      "block": ["reel_player_page_container", "reel_recycler", "reel_progress_bar", "reel_watch_player"],
+      "say": "Shorts مقفولة"
+    },
+    "com.snapchat.android": {
+      "name": "Snapchat",
+      "mode": "screens",
+      "block": ["spotlight_container"],
+      "say": "Spotlight مقفول · الشات شغال"
+    },
+    "com.facebook.katana,com.facebook.lite": {
+      "name": "Facebook",
+      "mode": "app",
+      "say": "فيسبوك مقفول · الرسايل في Messenger"
+    },
+    "com.zhiliaoapp.musically,com.zhiliaoapp.musically.go,com.ss.android.ugc.trill,com.ss.android.ugc.aweme,com.ss.android.ugc.aweme.lite": {
+      "name": "TikTok",
+      "mode": "app",
+      "say": "TikTok مقفول"
+    },
+    "com.instagram.lite,com.instagram.barcelona": {
+      "name": "Instagram",
+      "mode": "app",
+      "say": "مقفول · رسايل إنستجرام من التطبيق الأساسي"
+    },
+    "com.kwai.video,com.kwai.bulldog,video.like,com.likee.video": {
+      "name": "Reels",
+      "mode": "app",
+      "say": "مقفول"
+    },
+    "com.android.chrome": {
+      "name": "Chrome",
+      "mode": "url",
+      "bar": ["url_bar"],
+      "hosts": ["facebook.com", "fb.com", "fb.watch", "tiktok.com", "instagram.com", "threads.net", "threads.com", "youtube.com/shorts"],
+      "say": "مقفول من المتصفح كمان"
+    }
+  }
+}

@@ -2,6 +2,8 @@ package studio.athr.bokra
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -41,6 +43,12 @@ class MainActivity : ComponentActivity() {
         if (ok) r?.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else r?.deny()
     }
 
+    // the setup screen's runtime permissions (notifications, mic): the page re-checks when the answer comes back
+    private val askPerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        RecordWidget.refresh(this)
+        web.evaluateJavascript("window.bokraResume && bokraResume()", null)
+    }
+
     private val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         val text = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
         val arg = if (text != null) JSONObject.quote(text) else "null"
@@ -77,6 +85,7 @@ class MainActivity : ComponentActivity() {
         WebUpdate.resetIfApkChanged(this)
         val loader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebUpdate.Handler(this))
+            .addPathHandler("/voice/", WebViewAssetLoader.InternalStoragePathHandler(this, Voice.dir(this))) // recorded from the widget
             .build()
 
         web = WebView(this)
@@ -141,9 +150,7 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
+        // permissions are asked by the setup screen in the page, one tap each
         Scheduler.scheduleAll(this)
     }
 
@@ -161,6 +168,7 @@ class MainActivity : ComponentActivity() {
         WebUpdate.check(this) { webUpdated() }
         web.evaluateJavascript("window.bokraResume && bokraResume()", null)
         BokraWidget.refresh(this)
+        RecordWidget.refresh(this)
     }
 
     override fun onPause() {
@@ -175,11 +183,43 @@ class MainActivity : ComponentActivity() {
             "exact" -> if (Build.VERSION.SDK_INT >= 31) Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg) else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
             "battery" -> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg)
             "usage" -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            "guard" -> {
+                // highlights BOKRA in the list where the settings app supports it
+                val me = ComponentName(this, Guard::class.java).flattenToString()
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    .putExtra(":settings:fragment_args_key", me)
+                    .putExtra(":settings:show_fragment_args", Bundle().apply { putString(":settings:fragment_args_key", me) })
+            }
             else -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
         }
         try { startActivity(i) } catch (e: Exception) {
             try { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)) } catch (_: Exception) { }
         }
+    }
+
+    /** A setup step: the system dialog when there is one, otherwise the right settings page. */
+    fun ask(which: String) {
+        when (which) {
+            "notifications" -> if (Build.VERSION.SDK_INT >= 33) runtime(Manifest.permission.POST_NOTIFICATIONS) else openSettings("notifications")
+            "mic" -> runtime(Manifest.permission.RECORD_AUDIO)
+            "widget" -> {
+                val mgr = getSystemService(AppWidgetManager::class.java)
+                if (mgr.isRequestPinAppWidgetSupported) mgr.requestPinAppWidget(ComponentName(this, RecordWidget::class.java), null, null)
+            }
+            else -> openSettings(which)
+        }
+    }
+
+    private fun runtime(p: String) {
+        if (checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED) { web.evaluateJavascript("window.bokraResume && bokraResume()", null); return }
+        val prefs = Store.prefs(this)
+        // refused twice = Android won't show the dialog again: the app's settings page instead
+        if (prefs.getBoolean("asked_$p", false) && !shouldShowRequestPermissionRationale(p)) {
+            openSettings(if (p == Manifest.permission.POST_NOTIFICATIONS) "notifications" else "app")
+            return
+        }
+        prefs.edit().putBoolean("asked_$p", true).apply()
+        askPerm.launch(p)
     }
 
     /** window.BokraNative in the web app. */
@@ -205,11 +245,23 @@ class MainActivity : ComponentActivity() {
             val pm = getSystemService(PowerManager::class.java)
             return JSONObject()
                 .put("notifications", NotificationManagerCompat.from(c).areNotificationsEnabled())
+                .put("mic", checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
                 .put("exact", Scheduler.canExact(c))
                 .put("battery", pm.isIgnoringBatteryOptimizations(packageName))
                 .put("usage", ScreenTime.hasAccess(c))
+                .put("guard", Guard.enabled(c))
+                .put("widget", RecordWidget.placed(c))
+                .put("pin", getSystemService(AppWidgetManager::class.java).isRequestPinAppWidgetSupported)
+                .put("sdk", Build.VERSION.SDK_INT)
                 .toString()
         }
+
+        /** Present from the APK with the setup screen, the record widget and the social lock. */
+        @JavascriptInterface fun ask(which: String) { runOnUiThread { c.ask(which) } }
+
+        /** Recordings made from the widget that the page hasn't taken yet (files under /voice/). */
+        @JavascriptInterface fun voiceQueue(): String = Voice.list(c)
+        @JavascriptInterface fun voiceTaken(id: String) { Voice.taken(c, id) }
 
         @JavascriptInterface fun openSettings(which: String) { runOnUiThread { c.openSettings(which) } }
         @JavascriptInterface fun testNotification() { Notifier.test(c) }

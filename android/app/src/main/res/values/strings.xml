@@ -3,4 +3,8 @@
     <string name="widget_desc">الصلاة الجاية وأهم 3 مهام</string>
     <string name="widget_routine_name">الروتين</string>
     <string name="widget_routine_desc">روتين النهارده: الورد، المذاكرة، الشغل…</string>
+    <string name="widget_record_name">Record</string>
+    <string name="widget_record_desc">دوسة تسجّل، ودوسة تحفظ. من غير ما تفتح BOKRA</string>
+    <string name="guard_name">BOKRA · Social lock</string>
+    <string name="guard_desc">بيقفل الفيد والريلز والستوريز والإكسبلور في إنستجرام، والشورتس في يوتيوب، وتيك توك وفيسبوك كلهم. الرسايل بتفضل شغالة. بيعرف الشاشة من أسامي أجزائها بس، مبيقراش كلامك ولا رسايلك، ومبيبعتش أي حاجة لأي حد.</string>
 </resources>

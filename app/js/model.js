@@ -233,7 +233,7 @@ export const inbox = () => db.all('inbox').filter((i) => !i.data.processed).sort
 export function addInbox(text, source = 'text') { db.put('inbox', uid('i_'), { text, source, created_at: nowISO(), processed: false }); }
 // a recording: the audio itself (not text) goes to Claude, who writes the transcript and his notes back onto it
 export const newVoiceId = () => uid('i_');
-export function addVoice(id, audio) { db.put('inbox', id, { source: 'voice', audio: { ...audio, up: false }, created_at: nowISO(), processed: false }); }
+export function addVoice(id, audio, extra = {}) { db.put('inbox', id, { source: 'voice', audio: { ...audio, up: false }, created_at: nowISO(), processed: false, ...extra }); }
 // local = only on this device · sent = uploaded, Claude hasn't listened yet · heard = transcribed · done = Claude applied it and wrote notes
 export const voiceStatus = (i) => (i.data.processed ? 'done' : i.data.heard_at ? 'heard' : i.data.audio?.up ? 'sent' : 'local');
 export const voiceNotes = (days = 7) => db.all('inbox')

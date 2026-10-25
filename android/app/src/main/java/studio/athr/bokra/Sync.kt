@@ -8,13 +8,18 @@ import java.net.URL
 
 /** Lets the widget and notification buttons write to Supabase directly, without opening the app. */
 object Sync {
+    /** The signed-in session with a fresh token, or null while the phone isn't connected. */
+    fun auth(c: Context): JSONObject? {
+        val s = Store.session(c) ?: return null
+        if (s.optString("url").isBlank() || s.optString("key").isBlank()) return null
+        return if (System.currentTimeMillis() / 1000 > s.optLong("expires_at") - 90) refresh(c, s) else s
+    }
+
     fun upsert(c: Context, items: List<JSONObject>): Boolean {
         if (items.isEmpty()) return true
-        var s = Store.session(c) ?: return false
+        var s = auth(c) ?: return false
         val url = s.optString("url")
         val key = s.optString("key")
-        if (url.isBlank() || key.isBlank()) return false
-        if (System.currentTimeMillis() / 1000 > s.optLong("expires_at") - 90) s = refresh(c, s) ?: return false
         val uid = s.optJSONObject("user")?.optString("id").orEmpty()
         if (uid.isBlank()) return false
         val now = Store.isoNow()
@@ -60,7 +65,7 @@ object Sync {
         }
     }
 
-    private fun refresh(c: Context, s: JSONObject): JSONObject? {
+    fun refresh(c: Context, s: JSONObject): JSONObject? {
         val url = s.optString("url")
         val key = s.optString("key")
         return try {

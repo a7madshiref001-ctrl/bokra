@@ -15,6 +15,7 @@ object Notifier {
     private const val CH_PRAYER = "prayer"
     private const val CH_QUIET = "quiet"
     private const val CH_TASKS = "tasks"
+    const val CH_REC = "rec"
     private const val ACCENT = 0xFFF24A3D.toInt()
 
     fun channels(c: Context) {
@@ -30,7 +31,12 @@ object Notifier {
         val tasks = NotificationChannel(CH_TASKS, "المهام والتذكيرات", NotificationManager.IMPORTANCE_DEFAULT).apply {
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
-        nm.createNotificationChannels(listOf(prayer, quiet, tasks))
+        val rec = NotificationChannel(CH_REC, "التسجيل من الويدجت", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "بيظهر وإنت بتسجّل من زرار الشاشة الرئيسية"
+            setSound(null, null)
+            enableVibration(false)
+        }
+        nm.createNotificationChannels(listOf(prayer, quiet, tasks, rec))
     }
 
     fun openApp(c: Context): PendingIntent {

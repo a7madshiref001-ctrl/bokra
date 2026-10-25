@@ -7,7 +7,7 @@ import * as audio from './audio.js';
 import * as sync from './sync.js';
 import { openSheet, closeSheet, sheetOpen, buzz } from './ui.js';
 import { icon } from './icons.js';
-import { isNative, call } from './native.js';
+import { isNative, call, callJSON } from './native.js';
 import { toast } from './util.js';
 import { DEMO } from './config.js';
 
@@ -183,6 +183,34 @@ window.bokraVoiceResult = (text) => {
   const a = document.querySelector('[data-voice-text]');
   if (a && text) a.value = `${(a.value || '').trim()} ${text}`.trim();
 };
+
+// ---------- from the home-screen widget ----------
+// Recordings made with the widget while BOKRA was closed wait on the phone (served under /voice/).
+// One that already went to Supabase only needs its sound kept here, for playback; the row comes with the sync.
+let taking = false;
+export async function takeFromWidget() {
+  if (taking || DEMO) return;
+  const q = callJSON('voiceQueue');
+  if (!q || !q.length) return;
+  taking = true;
+  let added = 0;
+  try {
+    for (const n of q) {
+      try {
+        const res = await fetch(`/voice/${encodeURIComponent(n.file)}`);
+        if (!res.ok) { if (res.status === 404) call('voiceTaken', n.id); continue; }
+        const blob = new Blob([await res.arrayBuffer()], { type: 'audio/mp4' });
+        await audio.save(n.id, blob);
+        if (!n.up && !db.get(n.id)) {
+          M.addVoice(n.id, { mime: 'audio/mp4', dur: n.dur, size: n.size, peaks: n.peaks || [] }, { created_at: n.created_at || new Date().toISOString(), via: 'widget' });
+          added++;
+        }
+        call('voiceTaken', n.id);
+      } catch (e) { /* stays on the phone, next time */ }
+    }
+  } finally { taking = false; }
+  if (added && !sync.isReady()) toast(added > 1 ? `${added} تسجيلات من الويدجت هنا. وصّل المزامنة عشان توصل لـ Claude` : 'تسجيل الويدجت هنا. وصّل المزامنة عشان يوصل لـ Claude');
+}
 
 // ---------- playback ----------
 const player = { id: null, a: null, url: null, raf: 0 };

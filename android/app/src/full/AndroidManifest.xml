@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only in the real app (not BOKRA Demo): the record button on the home screen, and the social lock. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name="studio.athr.bokra.RecorderService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <receiver
+            android:name="studio.athr.bokra.RecordWidget"
+            android:exported="true"
+            android:label="@string/widget_record_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_record_info" />
+        </receiver>
+
+        <service
+            android:name="studio.athr.bokra.Guard"
+            android:exported="false"
+            android:label="@string/guard_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/guard" />
+        </service>
+    </application>
+</manifest>

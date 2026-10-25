@@ -87,17 +87,23 @@ function prayerCard() {
 
 function phoneCard() {
   const p = callJSON('permissions') || {};
+  const fresh = typeof window.BokraNative?.ask === 'function'; // APK with the record widget and the social lock
   const items = [
     ['notifications', 'bell', 'الإشعارات', p.notifications],
+    ...(fresh ? [['mic', 'mic', 'المايك', p.mic], ['guard', 'lock', 'قفل السوشيال', p.guard]] : []),
     ['exact', 'clock', 'التذكير في ميعاده', p.exact],
     ['battery', 'bolt', 'البطارية', p.battery],
     ['usage', 'phone', 'وقت الموبايل', p.usage],
   ];
   const missing = items.filter((x) => !x[3]);
+  const widget = fresh && !p.widget && p.pin;
   return `<div class="card" data-key="phone">${ch('Phone', 'phone', missing.length ? '' : '<span class="status ok"><i></i></span>')}
     ${missing.map(([w, ic, name]) => `<div class="srow"><span class="nm"><span class="ti">${icon(ic, 18)}</span><span>${name}</span></span>
       <button class="btn btn-sm" data-act="native-settings" data-which="${w}">فعّل</button></div>`).join('')}
-    <div class="actions" style="margin-top:${missing.length ? 16 : 0}px"><button class="btn" data-act="native-test">${icon('bell', 18)} جرّب إشعار</button></div></div>`;
+    ${widget ? `<div class="srow"><span class="nm"><span class="ti">${icon('mic', 18)}</span><span>زرار التسجيل على الشاشة</span></span>
+      <button class="btn btn-sm" data-act="native-settings" data-which="widget">حطه</button></div>` : ''}
+    ${fresh && p.guard ? `<p class="hint hint-ic">${icon('lock', 15)} قفل السوشيال شغال. الرسايل بس.</p>` : ''}
+    <div class="actions" style="margin-top:${missing.length || widget ? 16 : 0}px"><button class="btn" data-act="native-test">${icon('bell', 18)} جرّب إشعار</button></div></div>`;
 }
 
 function trackersCard() {

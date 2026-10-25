@@ -12,6 +12,7 @@ import * as S from './sheets.js';
 import * as V from './voice.js';
 import * as audio from './audio.js';
 import * as live from './live.js';
+import * as setup from './setup.js';
 import { startTimer, stopTimer, timers, elapsed, isComplete, afterChange } from './views/parts.js';
 import { claudePrompt } from './views/review.js';
 import { LEVELS } from './views/settings.js';
@@ -24,6 +25,7 @@ import * as settings from './views/settings.js';
 const VIEWS = { today, habits, week, review, settings };
 let current = 'today';
 let deferred = false;
+let booted = false; // the native side can call in (bokraResume) before the local database is open
 
 // ---------- render ----------
 function typing() {
@@ -69,6 +71,7 @@ function drainNative() {
   if (!isNative) return;
   const acts = callJSON('drainActions');
   if (acts && acts.length) M.applyNativeActions(acts);
+  if (booted) V.takeFromWidget(); // voice notes recorded from the home-screen button
 }
 function screenTime() {
   if (!isNative) return;
@@ -77,8 +80,9 @@ function screenTime() {
   const k = M.today();
   M.trackers().filter((t) => t.data.auto === 'screen_time').forEach((t) => { if (M.entry(t.id, k) !== m) M.setEntry(t.id, k, m); });
 }
-window.bokraResume = () => { drainNative(); screenTime(); sync.syncNow(); render(); };
+window.bokraResume = () => { drainNative(); screenTime(); sync.syncNow(); render(); setup.refresh(); };
 window.bokraBack = () => {
+  if (setup.isOpen()) return false; // back on the setup screen leaves the app, like any first screen
   if (closeSheet()) return true;
   if (current !== 'today') { location.hash = '#today'; return true; }
   return false;
@@ -171,6 +175,7 @@ const loginError = (m) => ({
 }[m] || m);
 
 const A = {
+  ...setup.actions,
   'sheet-close': () => closeSheet(),
   add: () => S.addMenu(),
   'add-task': () => S.taskForm(),
@@ -283,7 +288,8 @@ const A = {
   'sync-now': () => sync.syncNow(),
   'sync-out': () => { sync.signOut(); render(); },
   'sync-reset': () => { localStorage.removeItem('bokra.sync.cfg'); sync.signOut(); render(); },
-  'native-settings': (el) => call('openSettings', el.dataset.which),
+  // newer APK: the system dialog when there is one (ask); older: the settings page
+  'native-settings': (el) => call(typeof window.BokraNative?.ask === 'function' ? 'ask' : 'openSettings', el.dataset.which),
   'native-test': () => call('testNotification'),
   'backup-out': () => {
     const text = JSON.stringify({ app: 'BOKRA', at: new Date().toISOString(), items: db.everything().map(({ dirty, ...r }) => r) });
@@ -400,6 +406,7 @@ document.addEventListener('input', (e) => {
 // ---------- boot ----------
 async function boot() {
   await db.init();
+  booted = true;
   if (DEMO) seedDemo(); else M.seed();
   drainNative();
   screenTime();
@@ -427,6 +434,7 @@ async function boot() {
   const updated = live.justUpdated();
   setTimeout(() => $('#splash')?.classList.add('gone'), updated ? 0 : Math.max(120, 750 - performance.now()));
   if (updated) setTimeout(() => toast('اتحدّث لآخر نسخة'), 500);
+  setup.start();
   enablePress();
   enablePullToSync();
   window.addEventListener('resize', moveTabIndicator);

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The record button. Each face is a child of rec_flip; switching faces plays rec_in / rec_out. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rec_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:padding="6dp">
+
+    <ViewFlipper
+        android:id="@+id/rec_flip"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inAnimation="@anim/rec_in"
+        android:outAnimation="@anim/rec_out">
+
+        <!-- 0: ready -->
+        <LinearLayout style="@style/RecFace">
+            <FrameLayout style="@style/RecBtn">
+                <ImageView style="@style/RecDot" android:src="@drawable/rec_dot" />
+                <ImageView style="@style/RecIcon" android:src="@drawable/ic_rec_mic" />
+            </FrameLayout>
+            <TextView style="@style/RecLabel" android:text="Record" />
+        </LinearLayout>
+
+        <!-- 1: recording: the ring breathes, the label counts -->
+        <LinearLayout style="@style/RecFace">
+            <FrameLayout style="@style/RecBtn">
+                <ViewFlipper
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoStart="true"
+                    android:flipInterval="700"
+                    android:inAnimation="@anim/breathe_in"
+                    android:outAnimation="@anim/breathe_out">
+                    <ImageView style="@style/RecRing" android:src="@drawable/rec_ring" />
+                    <ImageView style="@style/RecRing" android:src="@drawable/rec_ring_soft" />
+                </ViewFlipper>
+                <ImageView style="@style/RecDot" android:layout_margin="5dp" android:src="@drawable/rec_dot" />
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="احفظ"
+                    android:src="@drawable/ic_rec_stop" />
+            </FrameLayout>
+            <Chronometer
+                android:id="@+id/rec_time"
+                style="@style/RecLabel"
+                android:textColor="#F7F5F2" />
+        </LinearLayout>
+
+        <!-- 2: saved -->
+        <LinearLayout style="@style/RecFace">
+            <FrameLayout style="@style/RecBtn">
+                <ImageView style="@style/RecDot" android:src="@drawable/rec_dot_done" />
+                <ImageView style="@style/RecIcon" android:src="@drawable/ic_rec_check" />
+            </FrameLayout>
+            <TextView style="@style/RecLabel" android:text="اتسجّل" android:textColor="#F7F5F2" />
+        </LinearLayout>
+
+        <!-- 3: the mic couldn't start (a call, another app using it) -->
+        <LinearLayout style="@style/RecFace">
+            <FrameLayout style="@style/RecBtn">
+                <ImageView style="@style/RecDot" android:src="@drawable/rec_dot_fail" />
+                <ImageView style="@style/RecIcon" android:src="@drawable/ic_rec_alert" />
+            </FrameLayout>
+            <TextView style="@style/RecLabel" android:text="المايك مشغول" />
+        </LinearLayout>
+    </ViewFlipper>
+</FrameLayout>

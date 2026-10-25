@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the ring around the button while recording: breathes in and out -->
+<set xmlns:android="http://schemas.android.com/apk/res/android" android:interpolator="@android:anim/accelerate_decelerate_interpolator">
+    <scale android:duration="700" android:fromXScale="0.82" android:fromYScale="0.82" android:pivotX="50%" android:pivotY="50%" android:toXScale="1" android:toYScale="1" />
+    <alpha android:duration="700" android:fromAlpha="0" android:toAlpha="1" />
+</set>
