@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The adhan screen (AdhanActivity): over the lock screen while the adhan plays. Double tap anywhere silences it. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/adhan_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:layoutDirection="rtl">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:paddingBottom="120dp">
+
+        <TextView
+            android:id="@+id/adhan_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="حان وقت الأذان"
+            android:textColor="#8E8983"
+            android:textSize="15sp" />
+
+        <FrameLayout
+            android:layout_width="230dp"
+            android:layout_height="230dp"
+            android:layout_marginTop="20dp">
+
+            <View
+                android:id="@+id/adhan_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/rec_ring_soft" />
+
+            <View
+                android:id="@+id/adhan_ring2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="34dp"
+                android:background="@drawable/rec_ring_soft" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/adhan_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#F7F5F2"
+                    android:textSize="54sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/adhan_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#C4BFB8"
+                    android:textSize="18sp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="34dp"
+            android:orientation="horizontal">
+
+            <LinearLayout style="@style/WDot">
+                <ImageView android:id="@+id/adhan_d0" style="@style/WDotBar" />
+                <TextView style="@style/WDotText" android:text="فجر" />
+            </LinearLayout>
+            <LinearLayout style="@style/WDot">
+                <ImageView android:id="@+id/adhan_d1" style="@style/WDotBar" />
+                <TextView style="@style/WDotText" android:text="ضهر" />
+            </LinearLayout>
+            <LinearLayout style="@style/WDot">
+                <ImageView android:id="@+id/adhan_d2" style="@style/WDotBar" />
+                <TextView style="@style/WDotText" android:text="عصر" />
+            </LinearLayout>
+            <LinearLayout style="@style/WDot">
+                <ImageView android:id="@+id/adhan_d3" style="@style/WDotBar" />
+                <TextView style="@style/WDotText" android:text="مغرب" />
+            </LinearLayout>
+            <LinearLayout style="@style/WDot">
+                <ImageView android:id="@+id/adhan_d4" style="@style/WDotBar" />
+                <TextView style="@style/WDotText" android:text="عشا" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/adhan_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:textColor="#8E8983"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:paddingBottom="36dp">
+
+        <TextView
+            android:id="@+id/adhan_pray"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/btn_accent"
+            android:gravity="center"
+            android:text="صليت ✓"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/adhan_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="دوس مرتين في أي حتة يسكّت الأذان"
+            android:textColor="#8E8983"
+            android:textSize="13sp" />
+    </LinearLayout>
+</FrameLayout>

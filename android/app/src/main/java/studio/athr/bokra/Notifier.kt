@@ -12,7 +12,8 @@ import org.json.JSONObject
 import java.util.Calendar
 
 object Notifier {
-    private const val CH_PRAYER = "prayer"
+    // the sound comes from PrayerAudio (voice, chime, adhan), so the prayer channel itself is silent
+    const val CH_PRAYER = "prayer_v2"
     private const val CH_QUIET = "quiet"
     private const val CH_TASKS = "tasks"
     const val CH_REC = "rec"
@@ -20,10 +21,13 @@ object Notifier {
 
     fun channels(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
-        val prayer = NotificationChannel(CH_PRAYER, "الصلاة", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "تذكير قبل الصلاة ووقت الأذان"
+        val prayer = NotificationChannel(CH_PRAYER, "الصلاة والأذان", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "قبلها بربع ساعة، وقبلها بـ5 دقايق، ووقت الأذان. الصوت من BOKRA نفسه"
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            setSound(null, null)
+            enableVibration(false)
         }
+        nm.deleteNotificationChannel("prayer") // the old one rang its own sound
         val quiet = NotificationChannel(CH_QUIET, "تذكير هادي وقت النوم", NotificationManager.IMPORTANCE_LOW).apply {
             description = "بيظهر من غير صوت وإنت نايم"
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
@@ -63,37 +67,40 @@ object Notifier {
     fun prayerId(i: Int) = 1000 + i
 
     fun prayer(c: Context, date: String, i: Int, due: Boolean) {
+        prayerBuilder(c, date, i, due)?.let { post(c, prayerId(i), it) }
+    }
+
+    /** The prayer's notification, or null when it's prayed already or the next prayer has come. Every prayer, sleep hours or not. */
+    fun prayerBuilder(c: Context, date: String, i: Int, due: Boolean, test: Boolean = false): NotificationCompat.Builder? {
         val s = Store.state(c)
-        if (Store.isPrayed(c, date, Prayer.KEYS[i])) return
+        if (!test && Store.isPrayed(c, date, Prayer.KEYS[i])) return null
         val times = Prayer.timesForKey(date, Store.lat(s), Store.lng(s), Store.fajrAngle(s), Store.ishaAngle(s))
         val at = times[i]
         val now = System.currentTimeMillis()
         val next = if (i < 4) times[i + 1] else Prayer.timesForKey(Prayer.shiftKey(date, 1), Store.lat(s), Store.lng(s), Store.fajrAngle(s), Store.ishaAngle(s))[0]
-        if (now >= next) return
+        if (!test && now >= next) return null
         val level = Store.level(s)
-        val quiet = sleeping(s, now)
         val name = Prayer.NAMES[i]
         val title = if (due || now >= at) "حان وقت $name" else {
             val m = ((at - now) / 60000L).coerceAtLeast(1)
-            "$name بعد $m دقيقة"
+            "$name بعد $m ${if (m in 3..10) "دقايق" else "دقيقة"}"
         }
         val code = prayerId(i)
-        val b = NotificationCompat.Builder(c, if (quiet) CH_QUIET else CH_PRAYER)
+        return NotificationCompat.Builder(c, CH_PRAYER)
             .setSmallIcon(R.drawable.ic_stat)
             .setColor(ACCENT)
             .setContentTitle(title)
             .setContentText("${Prayer.clock(at)} · ${s.optString("city", "بني سويف")}")
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setPriority(if (quiet) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(level >= 3)
             .setAutoCancel(false)
-            .setSilent(quiet)
+            .setSilent(true)
             .setContentIntent(openApp(c))
-            .setTimeoutAfter(next - now)
+            .setTimeoutAfter(maxOf(next - now, 60000L))
             .addAction(0, "صليت ✓", action(c, ActionReceiver.PRAY, code) { it.putExtra("date", date).putExtra("key", Prayer.KEYS[i]) })
             .addAction(0, "فكّرني بعد 10 د", action(c, ActionReceiver.SNOOZE, code + 50) { it.putExtra("date", date).putExtra("idx", i) })
-        post(c, code, b)
     }
 
     fun reminder(c: Context, r: JSONObject) {

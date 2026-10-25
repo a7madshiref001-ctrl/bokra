@@ -265,6 +265,15 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface fun openSettings(which: String) { runOnUiThread { c.openSettings(which) } }
         @JavascriptInterface fun testNotification() { Notifier.test(c) }
+        /** The adhan of the prayer we're in now, with its screen, to hear it once. */
+        @JavascriptInterface fun testAdhan() {
+            val s = Store.state(c)
+            val dk = Prayer.todayKey(Store.dayStart(s))
+            val t = Prayer.timesForKey(dk, Store.lat(s), Store.lng(s), Store.fajrAngle(s), Store.ishaAngle(s))
+            val now = System.currentTimeMillis()
+            val idx = (4 downTo 0).firstOrNull { t[it] <= now } ?: 0
+            PrayerAudio.start(c, PrayerAudio.ADHAN, dk, idx, test = true)
+        }
         @JavascriptInterface fun startVoice() { runOnUiThread { c.startVoice() } }
         /** Present from the APK that lets the web app record real audio. */
         @JavascriptInterface fun hasMic(): Boolean = true

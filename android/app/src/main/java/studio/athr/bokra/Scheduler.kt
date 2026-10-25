@@ -11,6 +11,7 @@ import java.util.Calendar
 /** Prayer reminders are computed here (they keep working even if the app isn't opened for days). */
 object Scheduler {
     private const val ACTION = "studio.athr.bokra.ALARM"
+    private const val CHIME_BEFORE = 5 * 60000L
 
     fun canExact(c: Context): Boolean {
         val am = c.getSystemService(AlarmManager::class.java)
@@ -35,6 +36,8 @@ object Scheduler {
             val t = Prayer.timesForKey(dk, Store.lat(s), Store.lng(s), Store.fajrAngle(s), Store.ishaAngle(s))
             for (i in 0..4) {
                 if (level >= 2) set(c, am, t[i] - lead, "prayer_lead:$dk:$i", codes) { it.putExtra("type", "prayer_lead").putExtra("date", dk).putExtra("idx", i) }
+                // a very soft chime 5 minutes before (when the voice comes earlier than that)
+                if (level >= 2 && lead > CHIME_BEFORE) set(c, am, t[i] - CHIME_BEFORE, "prayer_chime:$dk:$i", codes) { it.putExtra("type", "prayer_chime").putExtra("date", dk).putExtra("idx", i) }
                 // fires for every level: refreshes the widget, and notifies when the level asks for it
                 set(c, am, t[i] + 500, "prayer_due:$dk:$i", codes) { it.putExtra("type", "prayer_due").putExtra("date", dk).putExtra("idx", i) }
                 if (level >= 5) {
@@ -61,7 +64,16 @@ object Scheduler {
         }
         set(c, am, cal.timeInMillis, "reschedule", codes) { it.putExtra("type", "reschedule") }
 
-        prefs.edit().putStringSet("alarms", codes).apply()
+        prefs.edit().putStringSet("alarms", codes).putLong("scheduled_at", System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * Realme can force-stop the app, which drops every alarm. The day-rollover alarm is always set,
+     * so when Android no longer has it, the rest are gone too: put them all back. The social lock (always running) asks.
+     */
+    fun ensure(c: Context) {
+        val gone = PendingIntent.getBroadcast(c, "reschedule".hashCode(), intent(c, "reschedule"), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE) == null
+        if (gone || System.currentTimeMillis() - Store.prefs(c).getLong("scheduled_at", 0) > 6 * 3600_000L) scheduleAll(c)
     }
 
     fun snooze(c: Context, date: String, idx: Int, minutes: Int) {

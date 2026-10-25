@@ -13,13 +13,15 @@ class AlarmReceiver : BroadcastReceiver() {
         val date = intent.getStringExtra("date") ?: ""
         val idx = intent.getIntExtra("idx", 0)
         when (intent.getStringExtra("type")) {
-            "prayer_lead" -> Notifier.prayer(c, date, idx, due = false)
+            // the sounds: «اقتربت صلاة …» a quarter hour before, a soft chime 5 minutes before, the adhan on time (every level)
+            "prayer_lead" -> PrayerAudio.start(c, PrayerAudio.VOICE, date, idx)
+            "prayer_chime" -> PrayerAudio.start(c, PrayerAudio.CHIME, date, idx)
             "prayer_due" -> {
                 BokraWidget.refresh(c)
-                if (level == 1 || level >= 4) Notifier.prayer(c, date, idx, due = true)
+                PrayerAudio.start(c, PrayerAudio.ADHAN, date, idx)
             }
-            "prayer_repeat" -> if (!Notifier.sleeping(s)) Notifier.prayer(c, date, idx, due = true)
-            "prayer_snooze" -> Notifier.prayer(c, date, idx, due = true)
+            "prayer_repeat" -> if (!Notifier.sleeping(s) && level >= 5) PrayerAudio.start(c, PrayerAudio.REMIND, date, idx)
+            "prayer_snooze" -> PrayerAudio.start(c, PrayerAudio.REMIND, date, idx)
             "reminder" -> {
                 val r = try { JSONObject(intent.getStringExtra("json") ?: "{}") } catch (e: Exception) { JSONObject() }
                 Notifier.reminder(c, r)
@@ -50,14 +52,17 @@ class ActionReceiver : BroadcastReceiver() {
         const val TASK_POSTPONE = "studio.athr.bokra.TASK_POSTPONE"
         const val TRACKER_DONE = "studio.athr.bokra.TRACKER_DONE"
         const val ROUTINE = "studio.athr.bokra.ROUTINE"
+        const val SILENCE = "studio.athr.bokra.SILENCE"
     }
 
     override fun onReceive(c: Context, intent: Intent) {
         val items = mutableListOf<JSONObject>()
         when (intent.action) {
+            SILENCE -> PrayerAudio.current?.halt()
             PRAY -> {
                 val date = intent.getStringExtra("date") ?: return
                 val key = intent.getStringExtra("key") ?: return
+                PrayerAudio.current?.halt(repost = false) // prayed: the adhan (or the voice) can stop
                 Store.addAction(c, JSONObject().put("type", "prayer").put("date", date).put("key", key).put("done", true))
                 Notifier.cancel(c, Notifier.prayerId(Prayer.KEYS.indexOf(key)))
                 items.add(Sync.prayerItem(date, key))

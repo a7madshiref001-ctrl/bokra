@@ -72,6 +72,7 @@ class Guard : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         loadRules()
+        Scheduler.scheduleAll(this) // back after a reboot or a force-stop: the prayer alarms too
     }
 
     override fun onInterrupt() {}
@@ -98,6 +99,7 @@ class Guard : AccessibilityService() {
         fgSince = SystemClock.uptimeMillis()
         redirected = false
         loadRules()
+        try { Scheduler.ensure(this) } catch (e: Exception) { }
     }
 
     private fun evaluate() {

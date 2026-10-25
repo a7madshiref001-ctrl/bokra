@@ -291,6 +291,7 @@ const A = {
   // newer APK: the system dialog when there is one (ask); older: the settings page
   'native-settings': (el) => call(typeof window.BokraNative?.ask === 'function' ? 'ask' : 'openSettings', el.dataset.which),
   'native-test': () => call('testNotification'),
+  'native-adhan': () => call('testAdhan'),
   'backup-out': () => {
     const text = JSON.stringify({ app: 'BOKRA', at: new Date().toISOString(), items: db.everything().map(({ dirty, ...r }) => r) });
     if (isNative) call('share', { title: 'BOKRA backup', text }); else dlFile(`bokra-${M.today()}.json`, text);

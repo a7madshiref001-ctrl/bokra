@@ -76,7 +76,7 @@ function prayerCard() {
       <input type="range" name="level" min="1" max="5" step="1" value="${s.level}" aria-label="قوة التذكير"></div>
     <details class="more"><summary>${icon('sliders', 16)}<span class="en">More</span>${icon('chevD', 16)}</summary>
       <div class="field"><span class="lbl">${icon('clock', 15)} قبل الصلاة</span>${chips('lead', [5, 10, 15, 20, 30].map((n) => ({ value: n, label: `${n} د` })), s.lead)}</div>
-      <div class="field"><span class="lbl">${icon('moon', 15)} نومك (تذكير من غير صوت)</span>
+      <div class="field"><span class="lbl">${icon('moon', 15)} نومك (المهام من غير صوت، والأذان شغال)</span>
         <div class="row"><input class="in ltr" type="time" name="sleepFrom" value="${s.sleepFrom}" aria-label="من"><input class="in ltr" type="time" name="sleepTo" value="${s.sleepTo}" aria-label="لحد"></div></div>
       <div class="field"><span class="lbl">${icon('refresh', 15)} اليوم يبدأ الساعة</span>${chips('dayStartHour', [0, 2, 3, 4, 5].map((n) => ({ value: n, label: n === 0 ? '12' : `${n}` })), s.dayStartHour)}</div>
       <div class="field"><span class="lbl">${icon('briefcase', 15)} قبل الشيفت</span>${chips('preShift', [30, 60, 90, 120].map((n) => ({ value: n, label: n < 60 ? `${n} د` : `${n / 60} س` })), s.preShift)}</div>
@@ -103,7 +103,9 @@ function phoneCard() {
     ${widget ? `<div class="srow"><span class="nm"><span class="ti">${icon('mic', 18)}</span><span>زرار التسجيل على الشاشة</span></span>
       <button class="btn btn-sm" data-act="native-settings" data-which="widget">حطه</button></div>` : ''}
     ${fresh && p.guard ? `<p class="hint hint-ic">${icon('lock', 15)} قفل السوشيال شغال. الرسايل بس.</p>` : ''}
-    <div class="actions" style="margin-top:${missing.length || widget ? 16 : 0}px"><button class="btn" data-act="native-test">${icon('bell', 18)} جرّب إشعار</button></div></div>`;
+    <div class="actions" style="margin-top:${missing.length || widget ? 16 : 0}px">
+      ${typeof window.BokraNative?.testAdhan === 'function' ? `<button class="btn" data-act="native-adhan">${icon('mosque', 18)} جرّب الأذان</button>` : ''}
+      <button class="btn" data-act="native-test">${icon('bell', 18)} جرّب إشعار</button></div></div>`;
 }
 
 function trackersCard() {
