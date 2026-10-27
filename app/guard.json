@@ -44,13 +44,6 @@
       "name": "Reels",
       "mode": "app",
       "say": "مقفول"
-    },
-    "com.android.chrome": {
-      "name": "Chrome",
-      "mode": "url",
-      "bar": ["url_bar"],
-      "hosts": ["facebook.com", "fb.com", "fb.watch", "tiktok.com", "instagram.com", "threads.net", "threads.com", "youtube.com/shorts"],
-      "say": "مقفول من المتصفح كمان"
     }
   }
 }
